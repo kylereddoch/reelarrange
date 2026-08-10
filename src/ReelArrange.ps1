@@ -10,7 +10,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-$script:AppName = 'Reelarrange'
+$script:AppName = 'ReelArrange'
 $script:AppDataDirectory = Join-Path $env:LOCALAPPDATA $script:AppName
 $script:SettingsPath = Join-Path $script:AppDataDirectory 'settings.json'
 $script:LogPath = Join-Path $script:AppDataDirectory 'activity.log'
@@ -803,7 +803,7 @@ function Get-SidecarTargetName {
 }
 
 function Initialize-NativeFileTransfer {
-    if ($null -ne ('Reelarrange.NativeFileTransfer' -as [type])) { return }
+    if ($null -ne ('ReelArrange.NativeFileTransfer' -as [type])) { return }
 
     Add-Type -TypeDefinition @'
 using System;
@@ -811,7 +811,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace Reelarrange
+namespace ReelArrange
 {
     public static class NativeFileTransfer
     {
@@ -942,7 +942,7 @@ function Format-TransferSize {
 function New-TransferProgressWindow {
     param([ValidateSet('Copy', 'Move')][string]$Mode, [int]$FileCount)
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = 'Reelarrange - Transfer status'
+    $form.Text = 'ReelArrange - Transfer status'
     $form.Size = New-Object Drawing.Size(640, 270)
     $form.StartPosition = 'CenterScreen'
     $form.FormBorderStyle = 'FixedDialog'
@@ -1083,10 +1083,10 @@ function Invoke-TransferPlan {
 
             $overwrite = ($CollisionPolicy -eq 'Overwrite')
             if ($Mode -eq 'Copy') {
-                [Reelarrange.NativeFileTransfer]::Copy($item.Source, $item.Target, $overwrite, $callback)
+                [ReelArrange.NativeFileTransfer]::Copy($item.Source, $item.Target, $overwrite, $callback)
             }
             else {
-                [Reelarrange.NativeFileTransfer]::Move($item.Source, $item.Target, $overwrite, $callback)
+                [ReelArrange.NativeFileTransfer]::Move($item.Source, $item.Target, $overwrite, $callback)
             }
 
             $completed++
@@ -1351,7 +1351,7 @@ function Invoke-SelfTest {
         $failures.Add('Multiple movie version naming')
     }
 
-    $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('Reelarrange-' + [guid]::NewGuid().ToString('N'))
+    $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('ReelArrange-' + [guid]::NewGuid().ToString('N'))
     try {
         $sourceRoot = Join-Path $testRoot 'source'
         $destinationRoot = Join-Path $testRoot 'destination'
@@ -1503,7 +1503,7 @@ try {
     }
 
     $suggestedRoot = if ($mediaType -eq 'movie') { [string]$settings.MovieRoot } else { [string]$settings.ShowRoot }
-    $temporaryRoot = if ([string]::IsNullOrWhiteSpace($suggestedRoot)) { Join-Path $env:TEMP '__ReelarrangePreview__' } else { $suggestedRoot }
+    $temporaryRoot = if ([string]::IsNullOrWhiteSpace($suggestedRoot)) { Join-Path $env:TEMP '__ReelArrangePreview__' } else { $suggestedRoot }
     if ($mediaType -eq 'movie') {
         $temporaryPlan = @(New-MoviePlan -Videos $videos -Match $match -Root $temporaryRoot -SourceRoot $source.SourceRoot -IncludeFolderContent $source.IsFolder)
     }

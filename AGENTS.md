@@ -2,7 +2,7 @@
 
 ## Scope
 
-Reelarrange is a Windows PowerShell 5.1-compatible WinForms application for planning and transferring media into Jellyfin-compatible layouts.
+ReelArrange is a Windows PowerShell 5.1-compatible WinForms application for planning and transferring media into Jellyfin-compatible layouts.
 
 ## Required checks
 

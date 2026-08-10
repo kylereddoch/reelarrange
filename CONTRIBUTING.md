@@ -1,13 +1,13 @@
-# Contributing to Reelarrange
+# Contributing to ReelArrange
 
-Thank you for helping improve Reelarrange. Changes should preserve the project's central safety property: the application must show users what it intends to do and must not replace existing media without explicit confirmation.
+Thank you for helping improve ReelArrange. Changes should preserve the project's central safety property: the application must show users what it intends to do and must not replace existing media without explicit confirmation.
 
 ## Before opening an issue
 
 - Search existing issues.
 - Remove TMDB tokens, private server names, usernames, and sensitive paths from screenshots and logs.
 - Confirm whether the problem occurs with Copy, Move, or both.
-- Include the Reelarrange version, Windows version, source layout, and expected destination layout.
+- Include the ReelArrange version, Windows version, source layout, and expected destination layout.
 
 Use the repository's structured bug or feature templates whenever possible.
 

@@ -1,6 +1,6 @@
 # Tests
 
-Reelarrange currently uses dependency-free self-tests embedded in `src\Reelarrange.ps1` so the same checks can run on a clean Windows installation and in GitHub Actions without installing Pester.
+ReelArrange currently uses dependency-free self-tests embedded in `src\ReelArrange.ps1` so the same checks can run on a clean Windows installation and in GitHub Actions without installing Pester.
 
 Run all checks through:
 

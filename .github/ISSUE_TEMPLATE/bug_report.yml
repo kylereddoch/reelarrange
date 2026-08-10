@@ -1,5 +1,5 @@
 name: Bug report
-description: Report reproducible incorrect behavior in Reelarrange.
+description: Report reproducible incorrect behavior in ReelArrange.
 title: "[Bug]: "
 labels: [bug, needs-triage]
 body:
@@ -10,7 +10,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Reelarrange version
+      label: ReelArrange version
       placeholder: 0.1.0
     validations:
       required: true

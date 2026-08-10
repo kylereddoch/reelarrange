@@ -5,9 +5,9 @@
 ```text
 Desktop shortcut
     ↓
-Reelarrange.exe (windowless C# launcher)
+ReelArrange.exe (windowless C# launcher)
     ↓
-Reelarrange.ps1 (PowerShell 5.1 + WinForms)
+ReelArrange.ps1 (PowerShell 5.1 + WinForms)
     ├── Source selection and filename parsing
     ├── TMDB search and episode metadata
     ├── Jellyfin destination planning
@@ -35,7 +35,7 @@ The only required network service is TMDB API v3. Requests use either a Bearer A
 
 ## Local state
 
-`%LOCALAPPDATA%\Reelarrange\settings.json` stores:
+`%LOCALAPPDATA%\ReelArrange\settings.json` stores:
 
 - The DPAPI-encrypted TMDB credential.
 - The last Movies library root.

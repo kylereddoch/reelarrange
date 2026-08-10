@@ -1,10 +1,14 @@
 # Changelog
 
-All notable changes to Reelarrange will be documented in this file.
+All notable changes to ReelArrange will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- Standardized the display branding as **ReelArrange** and adopted 🎬 as the project mark.
 
 ### Planned
 

@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-We pledge to make participation in Reelarrange a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, sex characteristics, gender identity and expression, experience level, education, socioeconomic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+We pledge to make participation in ReelArrange a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, sex characteristics, gender identity and expression, experience level, education, socioeconomic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
 ## Expected behavior
 

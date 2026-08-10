@@ -17,7 +17,7 @@ docs/       User and maintainer documentation
 ## Running from source
 
 ```powershell
-powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\src\Reelarrange.ps1
+powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\src\ReelArrange.ps1
 ```
 
 Running directly from a terminal is useful for debugging but will display a console. The installed launcher avoids that console.
@@ -44,7 +44,7 @@ CI runs on `windows-latest` using Windows PowerShell.
 
 ## Building the launcher
 
-The installer compiles `src\ReelarrangeLauncher.cs` with the .NET Framework C# compiler included with Windows. Generated executables belong in the installation directory or `dist/`, never in source control.
+The installer compiles `src\ReelArrangeLauncher.cs` with the .NET Framework C# compiler included with Windows. Generated executables belong in the installation directory or `dist/`, never in source control.
 
 ## Packaging
 

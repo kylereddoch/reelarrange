@@ -1,15 +1,15 @@
-# Reelarrange
+# 🎬 ReelArrange
 
 [![Windows tests](https://github.com/kylereddoch/reelarrange/actions/workflows/test.yml/badge.svg)](https://github.com/kylereddoch/reelarrange/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)](https://learn.microsoft.com/powershell/)
 
-Reelarrange is a Windows desktop helper that identifies downloaded movies and TV shows with TMDB, previews a Jellyfin-ready library layout, and copies or moves the media into place.
+ReelArrange is a Windows desktop helper that identifies downloaded movies and TV shows with TMDB, previews a Jellyfin-ready library layout, and copies or moves the media into place.
 
 It is designed for the awkward gap between “the download finished” and “the media server understands it.” The interface handles matching, folder names, seasons, episode titles, sidecars, artwork, featurettes, trailers, collision behavior, and live transfer progress without requiring command-line use.
 
 > [!IMPORTANT]
-> Reelarrange is an early project. Always inspect the preview before moving media. Copy is the recommended transfer mode when a torrent should continue seeding.
+> ReelArrange is an early project. Always inspect the preview before moving media. Copy is the recommended transfer mode when a torrent should continue seeding.
 
 ## Features
 
@@ -64,7 +64,7 @@ The naming behavior follows Jellyfin's current [movie](https://jellyfin.org/docs
 - Internet access for TMDB searches
 - An existing Movies or Shows library folder, locally or over the network
 
-Reelarrange does not need to run on the Jellyfin server itself. A mapped drive or UNC share such as `\\server\media\Movies` is supported.
+ReelArrange does not need to run on the Jellyfin server itself. A mapped drive or UNC share such as `\\server\media\Movies` is supported.
 
 ## Installation
 
@@ -79,8 +79,8 @@ The installer:
 
 1. Parses and tests the PowerShell application.
 2. Builds a small windowless launcher from the included C# source.
-3. Installs the runnable files under `%LOCALAPPDATA%\Programs\Reelarrange`.
-4. Creates a **Reelarrange** shortcut on the current user's Desktop.
+3. Installs the runnable files under `%LOCALAPPDATA%\Programs\ReelArrange`.
+4. Creates a **ReelArrange** shortcut on the current user's Desktop.
 5. Migrates settings from the original private “Jellyfin Media Prep” build when found.
 
 The Desktop shortcut does not depend on the repository remaining in the same location.
@@ -89,7 +89,7 @@ To upgrade after pulling a newer version, run `scripts\install.ps1` again.
 
 ## First run
 
-1. Open **Reelarrange** from the Desktop.
+1. Open **ReelArrange** from the Desktop.
 2. Choose Movie or TV show.
 3. Select a file or complete release folder.
 4. Paste a TMDB API Read Access Token when prompted. The dialog links directly to TMDB's API settings page.
@@ -98,11 +98,11 @@ To upgrade after pulling a newer version, run `scripts\install.ps1` again.
 7. Inspect the complete destination preview.
 8. Start the transfer and follow the live status window.
 
-Selecting a complete release folder is recommended when the download contains extras or artwork. If a movie file is selected directly, Reelarrange detects recognized sibling extras folders and asks whether to include them.
+Selecting a complete release folder is recommended when the download contains extras or artwork. If a movie file is selected directly, ReelArrange detects recognized sibling extras folders and asks whether to include them.
 
 ## Existing-file behavior
 
-Reelarrange offers three policies:
+ReelArrange offers three policies:
 
 - **Add missing files; keep existing media** — recommended for adding extras to a movie that was already transferred.
 - **Stop if any destination file exists** — changes nothing when a collision is found.
@@ -117,12 +117,12 @@ The transfer window reports the current file, byte percentage, transferred size,
 
 ## Settings, logs, and privacy
 
-User data is stored under `%LOCALAPPDATA%\Reelarrange`:
+User data is stored under `%LOCALAPPDATA%\ReelArrange`:
 
 - `settings.json` contains the TMDB credential encrypted with Windows Data Protection for the current user, plus the last selected library roots.
 - `activity.log` records file operations and errors. It never records the TMDB credential.
 
-Reelarrange has no telemetry. See [Privacy](docs/PRIVACY.md) for the network and local-data model.
+ReelArrange has no telemetry. See [Privacy](docs/PRIVACY.md) for the network and local-data model.
 
 ## Uninstall
 
@@ -161,6 +161,6 @@ The current version is `0.1.0`. See [CHANGELOG.md](CHANGELOG.md) for changes and
 
 ## License and service notices
 
-Reelarrange is released under the [MIT License](LICENSE).
+ReelArrange is released under the [MIT License](LICENSE).
 
-Reelarrange is not affiliated with or endorsed by Jellyfin or TMDB. “Jellyfin” and “TMDB” are used only to describe interoperability. This product uses the TMDB API but is not endorsed or certified by TMDB. See [NOTICE.md](NOTICE.md).
+ReelArrange is not affiliated with or endorsed by Jellyfin or TMDB. “Jellyfin” and “TMDB” are used only to describe interoperability. This product uses the TMDB API but is not endorsed or certified by TMDB. See [NOTICE.md](NOTICE.md).

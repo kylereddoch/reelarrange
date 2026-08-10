@@ -7,9 +7,9 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $version = (Get-Content -LiteralPath (Join-Path $projectRoot 'VERSION') -Raw).Trim()
 $distRoot = Join-Path $projectRoot 'dist'
-$stageParent = Join-Path ([IO.Path]::GetTempPath()) ('ReelarrangePackage-' + [guid]::NewGuid().ToString('N'))
-$stageRoot = Join-Path $stageParent "Reelarrange-$version"
-$archive = Join-Path $distRoot "Reelarrange-$version.zip"
+$stageParent = Join-Path ([IO.Path]::GetTempPath()) ('ReelArrangePackage-' + [guid]::NewGuid().ToString('N'))
+$stageRoot = Join-Path $stageParent "ReelArrange-$version"
+$archive = Join-Path $distRoot "ReelArrange-$version.zip"
 $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 
 & (Join-Path $PSScriptRoot 'test.ps1')

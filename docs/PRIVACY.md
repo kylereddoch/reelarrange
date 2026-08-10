@@ -1,10 +1,10 @@
 # Privacy
 
-Reelarrange is a local desktop application with no telemetry, analytics, advertising, account system, update service, or inbound listener.
+ReelArrange is a local desktop application with no telemetry, analytics, advertising, account system, update service, or inbound listener.
 
 ## Network requests
 
-Reelarrange contacts `api.themoviedb.org` to:
+ReelArrange contacts `api.themoviedb.org` to:
 
 - Validate the user-supplied TMDB credential.
 - Search for movies and television series.
@@ -16,7 +16,7 @@ The application does not send media files, local paths, activity logs, Jellyfin 
 
 ## Local storage
 
-Reelarrange stores user state in `%LOCALAPPDATA%\Reelarrange`.
+ReelArrange stores user state in `%LOCALAPPDATA%\ReelArrange`.
 
 The TMDB credential is encrypted using Windows Data Protection through `ConvertFrom-SecureString`. It can be decrypted only in the same Windows user context under normal Windows security assumptions.
 
@@ -30,4 +30,4 @@ Run:
 .\scripts\uninstall.ps1 -RemoveUserData
 ```
 
-or manually remove `%LOCALAPPDATA%\Reelarrange` after closing the application.
+or manually remove `%LOCALAPPDATA%\ReelArrange` after closing the application.

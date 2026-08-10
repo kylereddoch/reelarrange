@@ -19,6 +19,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Run Reelarrange tests
+      - name: Run ReelArrange tests
         shell: powershell
         run: .\scripts\test.ps1 -Ci

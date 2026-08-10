@@ -2,7 +2,7 @@
 
 ## Overview
 
-Reelarrange prepares downloaded movies and TV shows for a Jellyfin library. It identifies the title with TMDB, creates a proposed destination layout, and transfers the selected media only after confirmation.
+ReelArrange prepares downloaded movies and TV shows for a Jellyfin library. It identifies the title with TMDB, creates a proposed destination layout, and transfers the selected media only after confirmation.
 
 ## Preparing a movie
 
@@ -31,7 +31,7 @@ Episode filenames should normally contain `S01E01` or `1x01`. A single unnumbere
 
 ## Extras
 
-Reelarrange recognizes these Jellyfin folder roles, including common spacing, case, underscore, and hyphen variations:
+ReelArrange recognizes these Jellyfin folder roles, including common spacing, case, underscore, and hyphen variations:
 
 - `behind the scenes`
 - `deleted scenes`
@@ -67,7 +67,7 @@ Any collision stops the complete operation before a transfer begins.
 
 ### Overwrite
 
-Missing destinations are handled first. Reelarrange then shows the exact number and a sample of paths that would be replaced. Choosing No cancels without replacing them.
+Missing destinations are handled first. ReelArrange then shows the exact number and a sample of paths that would be replaced. Choosing No cancels without replacing them.
 
 ## Copy and move behavior
 
@@ -80,7 +80,7 @@ The transfer-status window shows the active path, bytes transferred, percentage,
 The activity log is located at:
 
 ```text
-%LOCALAPPDATA%\Reelarrange\activity.log
+%LOCALAPPDATA%\ReelArrange\activity.log
 ```
 
 Each completed file transfer is logged after the operation returns successfully. A destination file may appear at its full final size while Windows is still writing data; use the transfer-status window rather than Explorer alone to determine completion.

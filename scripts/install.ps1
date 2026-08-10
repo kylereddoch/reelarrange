@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$InstallRoot = (Join-Path $env:LOCALAPPDATA 'Programs\Reelarrange'),
+    [string]$InstallRoot = (Join-Path $env:LOCALAPPDATA 'Programs\ReelArrange'),
     [switch]$NoDesktopShortcut,
     [switch]$SkipTests
 )
@@ -9,12 +9,12 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$sourceScript = Join-Path $projectRoot 'src\Reelarrange.ps1'
-$launcherSource = Join-Path $projectRoot 'src\ReelarrangeLauncher.cs'
+$sourceScript = Join-Path $projectRoot 'src\ReelArrange.ps1'
+$launcherSource = Join-Path $projectRoot 'src\ReelArrangeLauncher.cs'
 $versionPath = Join-Path $projectRoot 'VERSION'
 $compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $desktop = [Environment]::GetFolderPath('Desktop')
-$shortcutPath = Join-Path $desktop 'Reelarrange.lnk'
+$shortcutPath = Join-Path $desktop 'ReelArrange.lnk'
 $legacyShortcutPath = Join-Path $desktop 'Jellyfin Media Prep.lnk'
 
 foreach ($required in @($sourceScript, $launcherSource, $versionPath, $compiler)) {
@@ -23,9 +23,9 @@ foreach ($required in @($sourceScript, $launcherSource, $versionPath, $compiler)
     }
 }
 
-$running = @(Get-Process -Name 'Reelarrange' -ErrorAction SilentlyContinue)
+$running = @(Get-Process -Name 'ReelArrange' -ErrorAction SilentlyContinue)
 if ($running.Count -gt 0) {
-    throw 'Reelarrange is currently running. Close it and run the installer again.'
+    throw 'ReelArrange is currently running. Close it and run the installer again.'
 }
 
 if (-not $SkipTests) {
@@ -37,9 +37,9 @@ if (-not (Test-Path -LiteralPath $InstallRoot)) {
     New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
 }
 
-$installedScript = Join-Path $InstallRoot 'Reelarrange.ps1'
-$installedLauncher = Join-Path $InstallRoot 'Reelarrange.exe'
-$temporaryLauncher = Join-Path $InstallRoot 'Reelarrange.new.exe'
+$installedScript = Join-Path $InstallRoot 'ReelArrange.ps1'
+$installedLauncher = Join-Path $InstallRoot 'ReelArrange.exe'
+$temporaryLauncher = Join-Path $InstallRoot 'ReelArrange.new.exe'
 
 Copy-Item -LiteralPath $sourceScript -Destination $installedScript -Force
 Copy-Item -LiteralPath $versionPath -Destination (Join-Path $InstallRoot 'VERSION') -Force
@@ -55,7 +55,7 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $temporaryLauncher)) {
 }
 Move-Item -LiteralPath $temporaryLauncher -Destination $installedLauncher -Force
 
-$newDataRoot = Join-Path $env:LOCALAPPDATA 'Reelarrange'
+$newDataRoot = Join-Path $env:LOCALAPPDATA 'ReelArrange'
 $legacyDataRoot = Join-Path $env:LOCALAPPDATA 'Jellyfin Media Prep'
 $newSettings = Join-Path $newDataRoot 'settings.json'
 $legacySettings = Join-Path $legacyDataRoot 'settings.json'
@@ -96,6 +96,6 @@ if (Test-Path -LiteralPath $legacyShortcutPath -PathType Leaf) {
 
 $version = (Get-Content -LiteralPath $versionPath -Raw).Trim()
 Write-Host ''
-Write-Host "Reelarrange $version installed successfully."
+Write-Host "ReelArrange $version installed successfully."
 Write-Host "Application: $installedLauncher"
 if (-not $NoDesktopShortcut) { Write-Host "Desktop shortcut: $shortcutPath" }

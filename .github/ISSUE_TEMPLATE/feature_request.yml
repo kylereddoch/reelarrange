@@ -1,5 +1,5 @@
 name: Feature request
-description: Propose a focused improvement to Reelarrange.
+description: Propose a focused improvement to ReelArrange.
 title: "[Feature]: "
 labels: [enhancement, needs-triage]
 body:
@@ -37,7 +37,7 @@ body:
     attributes:
       label: Checks
       options:
-        - label: This request does not ask Reelarrange to download media or bypass access controls.
+        - label: This request does not ask ReelArrange to download media or bypass access controls.
           required: true
         - label: I searched existing issues for a similar request.
           required: true
