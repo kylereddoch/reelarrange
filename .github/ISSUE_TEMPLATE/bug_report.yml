@@ -1,0 +1,89 @@
+name: Bug report
+description: Report reproducible incorrect behavior in Reelarrange.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include TMDB credentials, copyrighted media, private server names, IP addresses, or unredacted personal paths.
+  - type: input
+    id: version
+    attributes:
+      label: Reelarrange version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: dropdown
+    id: media-type
+    attributes:
+      label: Media type
+      options:
+        - Movie file
+        - Movie folder
+        - Selected TV episodes
+        - TV season folder
+        - Complete TV show folder
+    validations:
+      required: true
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Operation
+      options:
+        - Copy
+        - Move
+    validations:
+      required: true
+  - type: dropdown
+    id: collision
+    attributes:
+      label: Existing-file policy
+      options:
+        - Add missing files
+        - Stop
+        - Overwrite
+    validations:
+      required: true
+  - type: textarea
+    id: source-layout
+    attributes:
+      label: Sanitized source layout
+      description: Show folder and filenames using fictional names if necessary.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and exact error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized activity-log excerpt
+      description: Remove usernames, hostnames, share names, IP addresses, and credentials.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed credentials and private infrastructure details.
+          required: true
+        - label: I searched existing issues for this behavior.
+          required: true

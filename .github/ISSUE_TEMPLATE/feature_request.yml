@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a focused improvement to Reelarrange.
+title: "[Feature]: "
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow is difficult or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the interaction and expected destination behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: data-risk
+    attributes:
+      label: Could this affect existing files?
+      options:
+        - No
+        - Yes, but only by copying
+        - Yes, it could move, replace, or delete files
+        - Unsure
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: This request does not ask Reelarrange to download media or bypass access controls.
+          required: true
+        - label: I searched existing issues for a similar request.
+          required: true

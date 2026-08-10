@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/kylereddoch/reelarrange/security/advisories/new
+    about: Report credential, overwrite, path-boundary, or code-execution vulnerabilities privately.
+  - name: Support guide
+    url: https://github.com/kylereddoch/reelarrange/blob/main/SUPPORT.md
+    about: Read what diagnostic information is useful and what must be redacted.
