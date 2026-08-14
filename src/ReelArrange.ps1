@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$SelfTest
+    [switch]$SelfTest,
+    [switch]$About
 )
 
 Set-StrictMode -Version 2.0
@@ -16,15 +17,162 @@ $script:SettingsPath = Join-Path $script:AppDataDirectory 'settings.json'
 $script:LogPath = Join-Path $script:AppDataDirectory 'activity.log'
 $script:VideoExtensions = @('.mkv', '.mp4', '.avi', '.m4v', '.mov', '.wmv', '.ts', '.m2ts', '.webm', '.mpg', '.mpeg')
 $script:SidecarExtensions = @('.srt', '.ass', '.ssa', '.sub', '.idx', '.vtt', '.nfo', '.jpg', '.jpeg', '.png', '.webp')
+$script:MaxTargetPathLength = 240
+$script:AppIcon = $null
 
 function Show-ErrorMessage {
     param([string]$Message)
+    $safeStopPrefix = "SAFE STOP:`r`n"
+    if ($Message.StartsWith($safeStopPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        $displayMessage = $Message.Substring($safeStopPrefix.Length)
+        [void][System.Windows.Forms.MessageBox]::Show(
+            $displayMessage,
+            "$script:AppName - Safe stop",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Warning
+        )
+        return
+    }
     [void][System.Windows.Forms.MessageBox]::Show($Message, $script:AppName, 'OK', 'Error')
 }
 
 function Show-InfoMessage {
     param([string]$Message)
     [void][System.Windows.Forms.MessageBox]::Show($Message, $script:AppName, 'OK', 'Information')
+}
+
+function Get-AppResourcePath {
+    param([string]$RelativePath)
+    $candidates = @(
+        (Join-Path $PSScriptRoot $RelativePath),
+        (Join-Path (Split-Path -Parent $PSScriptRoot) $RelativePath)
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return [IO.Path]::GetFullPath($candidate) }
+    }
+    return ''
+}
+
+function Get-AppVersion {
+    $versionPath = Get-AppResourcePath 'VERSION'
+    if ([string]::IsNullOrWhiteSpace($versionPath)) { return 'version unknown' }
+    return (Get-Content -LiteralPath $versionPath -Raw).Trim()
+}
+
+function Get-AppIcon {
+    if ($null -ne $script:AppIcon) { return $script:AppIcon }
+    $iconPath = Get-AppResourcePath 'assets\ReelArrange.ico'
+    if ([string]::IsNullOrWhiteSpace($iconPath)) { return $null }
+    try {
+        $script:AppIcon = New-Object Drawing.Icon $iconPath
+        return $script:AppIcon
+    }
+    catch {
+        return $null
+    }
+}
+
+function Set-FormBranding {
+    param([System.Windows.Forms.Form]$Form)
+    $icon = Get-AppIcon
+    if ($null -ne $icon) { $Form.Icon = $icon }
+}
+
+function Open-RepositoryPage {
+    try {
+        $startInfo = New-Object Diagnostics.ProcessStartInfo
+        $startInfo.FileName = 'https://github.com/kylereddoch/reelarrange'
+        $startInfo.UseShellExecute = $true
+        [void][Diagnostics.Process]::Start($startInfo)
+    }
+    catch {
+        Show-ErrorMessage "The ReelArrange repository could not be opened.`r`n`r`n$($_.Exception.Message)"
+    }
+}
+
+function Show-AboutDialog {
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = 'About ReelArrange'
+    $form.Size = New-Object Drawing.Size(625, 465)
+    $form.StartPosition = 'CenterScreen'
+    $form.FormBorderStyle = 'FixedDialog'
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+    Set-FormBranding $form
+
+    $logo = New-Object System.Windows.Forms.PictureBox
+    $logo.Location = New-Object Drawing.Point(24, 24)
+    $logo.Size = New-Object Drawing.Size(112, 112)
+    $logo.SizeMode = 'Zoom'
+    $logoPath = Get-AppResourcePath 'assets\ReelArrange.png'
+    if (-not [string]::IsNullOrWhiteSpace($logoPath)) {
+        try { $logo.Image = [Drawing.Image]::FromFile($logoPath) } catch { }
+    }
+    $form.Controls.Add($logo)
+
+    $title = New-Object System.Windows.Forms.Label
+    $title.Location = New-Object Drawing.Point(156, 30)
+    $title.Size = New-Object Drawing.Size(420, 38)
+    $title.Text = 'ReelArrange'
+    $title.Font = New-Object Drawing.Font('Segoe UI', 20, [Drawing.FontStyle]::Bold)
+    $form.Controls.Add($title)
+
+    $tagline = New-Object System.Windows.Forms.Label
+    $tagline.Location = New-Object Drawing.Point(160, 72)
+    $tagline.Size = New-Object Drawing.Size(400, 28)
+    $tagline.Text = 'Scattered media in. Jellyfin-ready library out.'
+    $tagline.Font = New-Object Drawing.Font('Segoe UI', 10, [Drawing.FontStyle]::Italic)
+    $form.Controls.Add($tagline)
+
+    $version = New-Object System.Windows.Forms.Label
+    $version.Location = New-Object Drawing.Point(160, 106)
+    $version.Size = New-Object Drawing.Size(250, 24)
+    $version.Text = "Version $(Get-AppVersion)"
+    $form.Controls.Add($version)
+
+    $description = New-Object System.Windows.Forms.Label
+    $description.Location = New-Object Drawing.Point(25, 158)
+    $description.Size = New-Object Drawing.Size(555, 78)
+    $description.Text = 'ReelArrange identifies downloaded movies and TV shows with TMDB, previews Jellyfin-ready naming, and safely copies or moves media, sidecars, artwork, and extras into place.'
+    $form.Controls.Add($description)
+
+    $builtBy = New-Object System.Windows.Forms.GroupBox
+    $builtBy.Location = New-Object Drawing.Point(25, 244)
+    $builtBy.Size = New-Object Drawing.Size(555, 80)
+    $builtBy.Text = 'Built by'
+    $form.Controls.Add($builtBy)
+
+    $author = New-Object System.Windows.Forms.Label
+    $author.Location = New-Object Drawing.Point(16, 24)
+    $author.Size = New-Object Drawing.Size(515, 42)
+    $author.Text = "Kyle Reddoch`r`nCybersecKyle - https://www.kylereddoch.me"
+    $builtBy.Controls.Add($author)
+
+    $repository = New-Object System.Windows.Forms.LinkLabel
+    $repository.Location = New-Object Drawing.Point(25, 338)
+    $repository.Size = New-Object Drawing.Size(555, 24)
+    $repository.Text = 'github.com/kylereddoch/reelarrange'
+    $repository.Add_LinkClicked({ Open-RepositoryPage })
+    $form.Controls.Add($repository)
+
+    $notice = New-Object System.Windows.Forms.Label
+    $notice.Location = New-Object Drawing.Point(25, 365)
+    $notice.Size = New-Object Drawing.Size(440, 38)
+    $notice.Text = 'MIT licensed. Uses the TMDB API; not endorsed or certified by TMDB or Jellyfin.'
+    $form.Controls.Add($notice)
+
+    $close = New-Object System.Windows.Forms.Button
+    $close.Location = New-Object Drawing.Point(490, 365)
+    $close.Size = New-Object Drawing.Size(90, 30)
+    $close.Text = 'Close'
+    $close.DialogResult = 'OK'
+    $form.Controls.Add($close)
+    $form.AcceptButton = $close
+    $form.CancelButton = $close
+
+    [void]$form.ShowDialog()
+    if ($null -ne $logo.Image) { $logo.Image.Dispose() }
+    $form.Dispose()
 }
 
 function Write-ActivityLog {
@@ -123,6 +271,7 @@ function Show-CredentialDialog {
 
     while ($true) {
         $form = New-Object System.Windows.Forms.Form
+        Set-FormBranding $form
         $form.Text = 'TMDB setup'
         $form.Size = New-Object Drawing.Size(610, 265)
         $form.StartPosition = 'CenterScreen'
@@ -229,6 +378,50 @@ function Get-SafeName {
     return $safe
 }
 
+function Get-StableNameHash {
+    param([string]$Value)
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [Text.Encoding]::UTF8.GetBytes($Value)
+        $hash = [BitConverter]::ToString($algorithm.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant()
+        return $hash.Substring(0, 8)
+    }
+    finally {
+        $algorithm.Dispose()
+    }
+}
+
+function Get-BoundedTargetBaseName {
+    param(
+        [string]$Directory,
+        [string]$BaseName,
+        [string[]]$Suffixes
+    )
+
+    $longestSuffix = 0
+    foreach ($suffix in @($Suffixes)) {
+        if ($null -ne $suffix -and $suffix.Length -gt $longestSuffix) { $longestSuffix = $suffix.Length }
+    }
+    $available = $script:MaxTargetPathLength - $Directory.TrimEnd('\').Length - 1 - $longestSuffix
+    if ($available -lt 32) {
+        throw "SAFE STOP:`r`nThe selected destination folder is too long to create safe Jellyfin filenames.`r`n`r`nNothing was copied or moved for this run.`r`n`r`nChoose a shorter destination root, such as D:\Media or a folder directly on the Desktop, and try again.`r`n`r`nDestination:`r`n$Directory"
+    }
+    if ($BaseName.Length -le $available) { return $BaseName }
+
+    $hash = Get-StableNameHash $BaseName
+    $prefixLength = $available - $hash.Length - 1
+    $prefix = $BaseName.Substring(0, $prefixLength).TrimEnd([char[]]' .-')
+    return "$prefix-$hash"
+}
+
+function Join-BoundedTargetFile {
+    param([string]$Directory, [string]$FileName)
+    $extension = [IO.Path]::GetExtension($FileName)
+    $baseName = [IO.Path]::GetFileNameWithoutExtension($FileName)
+    $boundedBase = Get-BoundedTargetBaseName -Directory $Directory -BaseName $baseName -Suffixes @($extension)
+    return Join-Path $Directory ($boundedBase + $extension)
+}
+
 function Get-SearchSeed {
     param([string]$Name, [ValidateSet('movie', 'tv')][string]$MediaType)
     $leafName = [IO.Path]::GetFileName($Name)
@@ -251,6 +444,7 @@ function Get-SearchSeed {
 
 function Show-MediaTypeDialog {
     $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
     $form.Text = $script:AppName
     $form.Size = New-Object Drawing.Size(440, 205)
     $form.StartPosition = 'CenterScreen'
@@ -278,6 +472,13 @@ function Show-MediaTypeDialog {
     $show.Text = 'TV show'
     $show.Add_Click({ $form.Tag = 'tv'; $form.DialogResult = 'OK'; $form.Close() })
     $form.Controls.Add($show)
+
+    $aboutButton = New-Object System.Windows.Forms.Button
+    $aboutButton.Location = New-Object Drawing.Point(25, 130)
+    $aboutButton.Size = New-Object Drawing.Size(90, 28)
+    $aboutButton.Text = 'About'
+    $aboutButton.Add_Click({ Show-AboutDialog })
+    $form.Controls.Add($aboutButton)
 
     $cancel = New-Object System.Windows.Forms.Button
     $cancel.Location = New-Object Drawing.Point(305, 130)
@@ -333,6 +534,7 @@ function Select-MediaSource {
     param([ValidateSet('movie', 'tv')][string]$MediaType)
 
     $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
     $form.Text = if ($MediaType -eq 'movie') { 'Select movie source' } else { 'Select TV source' }
     $form.Size = New-Object Drawing.Size(455, 220)
     $form.StartPosition = 'CenterScreen'
@@ -452,6 +654,197 @@ function Select-MediaSource {
     }
 }
 
+function Format-FileSize {
+    param([long]$Bytes)
+    if ($Bytes -ge 1TB) { return '{0:N1} TB' -f ($Bytes / 1TB) }
+    if ($Bytes -ge 1GB) { return '{0:N1} GB' -f ($Bytes / 1GB) }
+    if ($Bytes -ge 1MB) { return '{0:N1} MB' -f ($Bytes / 1MB) }
+    if ($Bytes -ge 1KB) { return '{0:N1} KB' -f ($Bytes / 1KB) }
+    return "$Bytes bytes"
+}
+
+function Get-DuplicateVideoFormatAnalysis {
+    param([IO.FileInfo[]]$Videos)
+
+    $duplicateGroups = @($Videos |
+        Group-Object -Property { [IO.Path]::Combine($_.DirectoryName, $_.BaseName) } |
+        Where-Object { @($_.Group | Group-Object -Property Extension).Count -gt 1 })
+    if ($duplicateGroups.Count -eq 0) { return $null }
+
+    $preferenceOrder = @('.mkv', '.mp4', '.m4v', '.mov', '.webm', '.avi', '.m2ts', '.ts', '.mpg', '.mpeg', '.wmv')
+    $extensions = @($duplicateGroups | ForEach-Object { $_.Group } | ForEach-Object { $_.Extension.ToLowerInvariant() } | Sort-Object -Unique)
+    $formatStats = New-Object System.Collections.Generic.List[object]
+    foreach ($extension in $extensions) {
+        $files = @($duplicateGroups | ForEach-Object { $_.Group } | Where-Object { $_.Extension.ToLowerInvariant() -eq $extension })
+        $groupsAvailable = @($duplicateGroups | Where-Object { @($_.Group | Where-Object { $_.Extension.ToLowerInvariant() -eq $extension }).Count -gt 0 }).Count
+        $largestInGroups = 0
+        foreach ($group in $duplicateGroups) {
+            $candidate = @($group.Group | Where-Object { $_.Extension.ToLowerInvariant() -eq $extension } | Sort-Object Length -Descending | Select-Object -First 1)
+            if ($candidate.Count -eq 0) { continue }
+            $largestLength = ($group.Group | Measure-Object -Property Length -Maximum).Maximum
+            if ($candidate[0].Length -eq $largestLength) { $largestInGroups++ }
+        }
+        $totalBytes = [long](($files | Measure-Object -Property Length -Sum).Sum)
+        $preferenceRank = [Array]::IndexOf($preferenceOrder, $extension)
+        if ($preferenceRank -lt 0) { $preferenceRank = 999 }
+        $formatStats.Add([pscustomobject]@{
+            Extension = $extension
+            Label = $extension.TrimStart('.').ToUpperInvariant()
+            FileCount = $files.Count
+            GroupsAvailable = $groupsAvailable
+            LargestInGroups = $largestInGroups
+            TotalBytes = $totalBytes
+            PreferenceRank = $preferenceRank
+        })
+    }
+
+    $rankedFormats = @($formatStats.ToArray() | Sort-Object `
+        @{ Expression = 'GroupsAvailable'; Descending = $true },
+        @{ Expression = 'LargestInGroups'; Descending = $true },
+        @{ Expression = 'TotalBytes'; Descending = $true },
+        @{ Expression = 'PreferenceRank'; Descending = $false })
+    return [pscustomobject]@{
+        Groups = $duplicateGroups
+        GroupCount = $duplicateGroups.Count
+        Formats = $rankedFormats
+        RecommendedExtension = $rankedFormats[0].Extension
+    }
+}
+
+function Select-DuplicateVideoFormat {
+    param([object]$Analysis)
+
+    $recommended = @($Analysis.Formats | Where-Object { $_.Extension -eq $Analysis.RecommendedExtension } | Select-Object -First 1)[0]
+    $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
+    $form.Text = 'Choose duplicate video format'
+    $form.Size = New-Object Drawing.Size(680, 455)
+    $form.StartPosition = 'CenterScreen'
+    $form.FormBorderStyle = 'FixedDialog'
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+
+    $heading = New-Object System.Windows.Forms.Label
+    $heading.Location = New-Object Drawing.Point(18, 16)
+    $heading.Size = New-Object Drawing.Size(630, 62)
+    $heading.Text = "ReelArrange found $($Analysis.GroupCount) episode or movie name(s) stored in more than one video format. Choose which format to keep. The other video copies will be excluded before planning; source files will not be changed."
+    $form.Controls.Add($heading)
+
+    $details = New-Object System.Windows.Forms.TextBox
+    $details.Location = New-Object Drawing.Point(18, 84)
+    $details.Size = New-Object Drawing.Size(630, 165)
+    $details.Multiline = $true
+    $details.ReadOnly = $true
+    $details.ScrollBars = 'Vertical'
+    $details.BackColor = [Drawing.SystemColors]::Window
+    $detailLines = New-Object System.Collections.Generic.List[string]
+    foreach ($format in $Analysis.Formats) {
+        $detailLines.Add(('{0}: {1} file(s), {2}, available for {3} of {4} duplicate name(s), largest in {5}' -f
+            $format.Label, $format.FileCount, (Format-FileSize $format.TotalBytes), $format.GroupsAvailable, $Analysis.GroupCount, $format.LargestInGroups))
+    }
+    $details.Text = $detailLines -join "`r`n"
+    $form.Controls.Add($details)
+
+    $recommendation = New-Object System.Windows.Forms.Label
+    $recommendation.Location = New-Object Drawing.Point(18, 262)
+    $recommendation.Size = New-Object Drawing.Size(630, 48)
+    $recommendation.Text = "Recommended: $($recommended.Label). It has the best combination of episode coverage and larger source files. File size can suggest quality or extra streams, but ReelArrange has not inspected the video or audio streams."
+    $form.Controls.Add($recommendation)
+
+    $formatLabel = New-Object System.Windows.Forms.Label
+    $formatLabel.Location = New-Object Drawing.Point(18, 320)
+    $formatLabel.Size = New-Object Drawing.Size(105, 24)
+    $formatLabel.Text = 'Format to keep:'
+    $form.Controls.Add($formatLabel)
+
+    $formatChoice = New-Object System.Windows.Forms.ComboBox
+    $formatChoice.Location = New-Object Drawing.Point(125, 317)
+    $formatChoice.Size = New-Object Drawing.Size(300, 25)
+    $formatChoice.DropDownStyle = 'DropDownList'
+    $formatChoice.DisplayMember = 'Display'
+    foreach ($format in $Analysis.Formats) {
+        $suffix = if ($format.Extension -eq $Analysis.RecommendedExtension) { ' (recommended)' } else { '' }
+        [void]$formatChoice.Items.Add([pscustomobject]@{
+            Display = "$($format.Label)$suffix"
+            Extension = $format.Extension
+        })
+    }
+    $formatChoice.SelectedIndex = 0
+    $form.Controls.Add($formatChoice)
+
+    $fallbackNote = New-Object System.Windows.Forms.Label
+    $fallbackNote.Location = New-Object Drawing.Point(18, 352)
+    $fallbackNote.Size = New-Object Drawing.Size(420, 40)
+    $fallbackNote.Text = 'If that format is missing from an unusual mixed pair, ReelArrange keeps the largest available file for that pair.'
+    $form.Controls.Add($fallbackNote)
+
+    $continue = New-Object System.Windows.Forms.Button
+    $continue.Location = New-Object Drawing.Point(462, 355)
+    $continue.Size = New-Object Drawing.Size(90, 32)
+    $continue.Text = 'Continue'
+    $continue.Add_Click({
+        if ($null -eq $formatChoice.SelectedItem) { return }
+        $form.Tag = [string]$formatChoice.SelectedItem.Extension
+        $form.DialogResult = 'OK'
+        $form.Close()
+    })
+    $form.Controls.Add($continue)
+    $form.AcceptButton = $continue
+
+    $cancel = New-Object System.Windows.Forms.Button
+    $cancel.Location = New-Object Drawing.Point(558, 355)
+    $cancel.Size = New-Object Drawing.Size(90, 32)
+    $cancel.Text = 'Cancel'
+    $cancel.DialogResult = 'Cancel'
+    $form.Controls.Add($cancel)
+    $form.CancelButton = $cancel
+
+    if ($form.ShowDialog() -ne 'OK') { return '' }
+    return [string]$form.Tag
+}
+
+function Resolve-DuplicateVideoFormats {
+    param(
+        [IO.FileInfo[]]$Videos,
+        [string]$PreferredExtension = '',
+        [switch]$SkipDialog
+    )
+
+    $analysis = Get-DuplicateVideoFormatAnalysis -Videos $Videos
+    if ($null -eq $analysis) {
+        return [pscustomobject]@{ Videos = $Videos; DuplicateGroupCount = 0; ExcludedCount = 0; PreferredExtension = '' }
+    }
+    if ([string]::IsNullOrWhiteSpace($PreferredExtension)) {
+        if ($SkipDialog) { $PreferredExtension = $analysis.RecommendedExtension }
+        else { $PreferredExtension = Select-DuplicateVideoFormat -Analysis $analysis }
+    }
+    if ([string]::IsNullOrWhiteSpace($PreferredExtension)) { return $null }
+    $PreferredExtension = $PreferredExtension.ToLowerInvariant()
+
+    $selectedPaths = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($group in $analysis.Groups) {
+        $preferred = @($group.Group | Where-Object { $_.Extension.ToLowerInvariant() -eq $PreferredExtension } | Sort-Object Length -Descending | Select-Object -First 1)
+        $selected = if ($preferred.Count -gt 0) { $preferred[0] } else { @($group.Group | Sort-Object Length -Descending | Select-Object -First 1)[0] }
+        [void]$selectedPaths.Add($selected.FullName)
+    }
+    $duplicateKeys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($group in $analysis.Groups) { [void]$duplicateKeys.Add([string]$group.Name) }
+
+    $resolved = New-Object System.Collections.Generic.List[IO.FileInfo]
+    foreach ($video in $Videos) {
+        $key = [IO.Path]::Combine($video.DirectoryName, $video.BaseName)
+        if (-not $duplicateKeys.Contains($key) -or $selectedPaths.Contains($video.FullName)) {
+            $resolved.Add($video)
+        }
+    }
+    return [pscustomobject]@{
+        Videos = $resolved.ToArray()
+        DuplicateGroupCount = $analysis.GroupCount
+        ExcludedCount = $Videos.Count - $resolved.Count
+        PreferredExtension = $PreferredExtension
+    }
+}
+
 function Select-TmdbMatch {
     param(
         [ValidateSet('movie', 'tv')][string]$MediaType,
@@ -461,6 +854,7 @@ function Select-TmdbMatch {
     )
 
     $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
     $form.Text = 'Choose the TMDB match'
     $form.Size = New-Object Drawing.Size(780, 535)
     $form.StartPosition = 'CenterScreen'
@@ -598,6 +992,7 @@ function Get-EpisodeInfo {
 function Show-EpisodeNumberDialog {
     param([string]$FileName)
     $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
     $form.Text = 'Episode number needed'
     $form.Size = New-Object Drawing.Size(475, 245)
     $form.StartPosition = 'CenterScreen'
@@ -668,6 +1063,7 @@ function Select-Operation {
         [ValidateSet('movie', 'tv')][string]$MediaType
     )
     $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
     $form.Text = 'Confirm Jellyfin destination'
     $form.Size = New-Object Drawing.Size(720, 535)
     $form.StartPosition = 'CenterScreen'
@@ -880,9 +1276,9 @@ namespace ReelArrange
 
         private static string NativePath(string path)
         {
-            string fullPath = Path.GetFullPath(path);
-            if (fullPath.StartsWith(@"\\?\")) return fullPath;
-            if (fullPath.Length < 248) return fullPath;
+            if (String.IsNullOrWhiteSpace(path)) throw new ArgumentException("A file path is required.", "path");
+            if (path.StartsWith(@"\\?\")) return path;
+            string fullPath = Path.IsPathRooted(path) ? path : Path.GetFullPath(path);
             if (fullPath.StartsWith(@"\\")) return @"\\?\UNC\" + fullPath.Substring(2);
             return @"\\?\" + fullPath;
         }
@@ -942,6 +1338,7 @@ function Format-TransferSize {
 function New-TransferProgressWindow {
     param([ValidateSet('Copy', 'Move')][string]$Mode, [int]$FileCount)
     $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
     $form.Text = 'ReelArrange - Transfer status'
     $form.Size = New-Object Drawing.Size(640, 270)
     $form.StartPosition = 'CenterScreen'
@@ -1007,16 +1404,29 @@ function Invoke-TransferPlan {
         [bool]$ShowProgress = $true
     )
 
+    $unsafeTargets = @($Plan | Where-Object {
+        ([string]$_.Target).Length -gt $script:MaxTargetPathLength -or
+        (Split-Path -Leaf ([string]$_.Target)).Length -gt $script:MaxTargetPathLength
+    })
+    if ($unsafeTargets.Count -gt 0) {
+        $paths = ($unsafeTargets | Select-Object -First 8 | ForEach-Object { $_.Target }) -join "`r`n"
+        $moreText = if ($unsafeTargets.Count -gt 8) { "`r`n...and $($unsafeTargets.Count - 8) more unsafe target(s)" } else { '' }
+        throw "SAFE STOP:`r`nReelArrange found $($unsafeTargets.Count) destination path(s) that are too long for a reliable Windows transfer.`r`n`r`nNothing was copied or moved.`r`n`r`nChoose a shorter destination root or shorten the source folder names, then try again.`r`n`r`nUnsafe destinations (first 8):`r`n$paths$moreText"
+    }
+
     $duplicates = $Plan | Group-Object -Property Target | Where-Object { $_.Count -gt 1 }
     if ($duplicates) {
-        $paths = ($duplicates | ForEach-Object { $_.Name }) -join "`r`n"
-        throw "Two selected files would use the same destination. Nothing was changed.`r`n`r`n$paths"
+        $sampleCount = 12
+        $paths = ($duplicates | Select-Object -First $sampleCount | ForEach-Object { $_.Name }) -join "`r`n"
+        $moreText = if (@($duplicates).Count -gt $sampleCount) { "`r`n...and $(@($duplicates).Count - $sampleCount) more conflicting destination(s)" } else { '' }
+        throw "SAFE STOP:`r`nReelArrange stopped before copying or moving any files.`r`n`r`nWhy it stopped:`r`n$(@($duplicates).Count) destination path(s) would be used by more than one selected source file. This can happen when overlapping sidecars or duplicate media versions resolve to the same Jellyfin name.`r`n`r`nNothing was changed.`r`n`r`nWhat to do:`r`nGo back and select only one source version, or review files with identical names. If ReelArrange offered a format choice, choose one format rather than keeping overlapping copies.`r`n`r`nConflicting destinations (first $sampleCount):`r`n$paths$moreText"
     }
 
     $existing = @($Plan | Where-Object { Test-Path -LiteralPath $_.Target })
     if ($existing.Count -gt 0 -and $CollisionPolicy -eq 'Stop') {
         $paths = ($existing | Select-Object -First 12 | ForEach-Object { $_.Target }) -join "`r`n"
-        throw "Destination files already exist. Nothing was changed.`r`n`r`n$paths`r`n`r`nRun again and choose Skip or Overwrite if that is intentional."
+        $moreText = if ($existing.Count -gt 12) { "`r`n...and $($existing.Count - 12) more existing destination(s)" } else { '' }
+        throw "SAFE STOP:`r`nReelArrange stopped before copying or moving any files.`r`n`r`nWhy it stopped:`r`n$($existing.Count) planned destination file(s) already exist, and you selected 'Stop if any destination file exists'.`r`n`r`nNothing was changed.`r`n`r`nWhat to do:`r`nRun the job again and choose 'Add missing files' to leave existing files untouched, or choose 'Overwrite existing files' if you intentionally want to replace them.`r`n`r`nExisting destinations (first 12):`r`n$paths$moreText"
     }
 
     if ($existing.Count -gt 0 -and $CollisionPolicy -eq 'Overwrite') {
@@ -1082,11 +1492,22 @@ function Invoke-TransferPlan {
             }
 
             $overwrite = ($CollisionPolicy -eq 'Overwrite')
-            if ($Mode -eq 'Copy') {
-                [ReelArrange.NativeFileTransfer]::Copy($item.Source, $item.Target, $overwrite, $callback)
+            try {
+                if ($Mode -eq 'Copy') {
+                    [ReelArrange.NativeFileTransfer]::Copy($item.Source, $item.Target, $overwrite, $callback)
+                }
+                else {
+                    [ReelArrange.NativeFileTransfer]::Move($item.Source, $item.Target, $overwrite, $callback)
+                }
             }
-            else {
-                [ReelArrange.NativeFileTransfer]::Move($item.Source, $item.Target, $overwrite, $callback)
+            catch {
+                $sourceGuidance = if ($Mode -eq 'Copy') {
+                    'Copy mode leaves the original source files in place.'
+                }
+                else {
+                    'Move mode does not roll back earlier completed files; those sources are already at the destination.'
+                }
+                throw "SAFE STOP:`r`n$Mode stopped while processing file $($index + 1) of $($itemsToTransfer.Count).`r`n`r`nCompleted before the stop: $completed file(s). Earlier completed files were not rolled back. $sourceGuidance`r`n`r`nFailed source:`r`n$($item.Source)`r`n`r`nPlanned destination:`r`n$($item.Target)`r`n`r`nReason:`r`n$($_.Exception.Message)`r`n`r`nAfter correcting the problem, run the same job with 'Add missing files' to keep completed destinations and transfer only what is still absent."
             }
 
             $completed++
@@ -1171,22 +1592,23 @@ function Get-FolderCompanionPlan {
 
         if ($extraIndex -ge 0) {
             $target = Join-Path $targetBase $canonicalExtra
-            for ($i = $extraIndex + 1; $i -lt $segments.Count; $i++) {
+            for ($i = $extraIndex + 1; $i -lt ($segments.Count - 1); $i++) {
                 $target = Join-Path $target $segments[$i]
             }
+            $target = Join-BoundedTargetFile -Directory $target -FileName $segments[$segments.Count - 1]
             $results.Add([pscustomobject]@{ Source = $file.FullName; Target = $target })
             continue
         }
 
         if (Test-IsLooseExtra $file) {
-            $results.Add([pscustomobject]@{ Source = $file.FullName; Target = Join-Path $targetBase $file.Name })
+            $results.Add([pscustomobject]@{ Source = $file.FullName; Target = Join-BoundedTargetFile -Directory $targetBase -FileName $file.Name })
             continue
         }
 
         if (Test-IsArtworkFile $file) {
             $parentRelative = $file.DirectoryName.Substring($sourceRootFull.Length).TrimStart('\')
             if ([string]::IsNullOrWhiteSpace($parentRelative) -or $null -ne (Get-SeasonNumberFromNames @($file.Directory.Name, $rootLeaf))) {
-                $results.Add([pscustomobject]@{ Source = $file.FullName; Target = Join-Path $targetBase $file.Name })
+                $results.Add([pscustomobject]@{ Source = $file.FullName; Target = Join-BoundedTargetFile -Directory $targetBase -FileName $file.Name })
             }
         }
     }
@@ -1229,15 +1651,21 @@ function New-MoviePlan {
     $usedTargets = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
     for ($index = 0; $index -lt $Videos.Count; $index++) {
         $video = $Videos[$index]
-        $targetVideoBase = Get-MovieTargetVideoBase -Video $video -FolderName $folderName -Index $index -Count $Videos.Count
+        $sidecars = @(Get-AssociatedSidecars $video)
+        $suffixes = New-Object System.Collections.Generic.List[string]
+        $suffixes.Add($video.Extension.ToLowerInvariant())
+        foreach ($sidecar in $sidecars) { $suffixes.Add($sidecar.Name.Substring($video.BaseName.Length)) }
+        $unboundedTargetVideoBase = Get-MovieTargetVideoBase -Video $video -FolderName $folderName -Index $index -Count $Videos.Count
+        $targetVideoBase = Get-BoundedTargetBaseName -Directory $targetDirectory -BaseName $unboundedTargetVideoBase -Suffixes $suffixes.ToArray()
         $targetVideo = Join-Path $targetDirectory ($targetVideoBase + $video.Extension.ToLowerInvariant())
         if (-not $usedTargets.Add($targetVideo)) {
-            $targetVideoBase += " - Version $($index + 1)"
+            $unboundedTargetVideoBase += " - Version $($index + 1)"
+            $targetVideoBase = Get-BoundedTargetBaseName -Directory $targetDirectory -BaseName $unboundedTargetVideoBase -Suffixes $suffixes.ToArray()
             $targetVideo = Join-Path $targetDirectory ($targetVideoBase + $video.Extension.ToLowerInvariant())
             [void]$usedTargets.Add($targetVideo)
         }
         $plan.Add([pscustomobject]@{ Source = $video.FullName; Target = $targetVideo })
-        foreach ($sidecar in Get-AssociatedSidecars $video) {
+        foreach ($sidecar in $sidecars) {
             $targetName = Get-SidecarTargetName -Sidecar $sidecar -Video $video -TargetVideoBase $targetVideoBase
             $plan.Add([pscustomobject]@{ Source = $sidecar.FullName; Target = Join-Path $targetDirectory $targetName })
         }
@@ -1297,8 +1725,13 @@ function New-TvPlan {
         if ($episodeNames.Count -gt 0) { $targetVideoBase += ' ' + ($episodeNames -join ' + ') }
         $seasonFolder = 'Season {0:D2}' -f $ep.Season
         $targetDirectory = Join-Path (Join-Path $Root $seriesFolderName) $seasonFolder
+        $sidecars = @(Get-AssociatedSidecars $video)
+        $suffixes = New-Object System.Collections.Generic.List[string]
+        $suffixes.Add($video.Extension.ToLowerInvariant())
+        foreach ($sidecar in $sidecars) { $suffixes.Add($sidecar.Name.Substring($video.BaseName.Length)) }
+        $targetVideoBase = Get-BoundedTargetBaseName -Directory $targetDirectory -BaseName $targetVideoBase -Suffixes $suffixes.ToArray()
         $plan.Add([pscustomobject]@{ Source = $video.FullName; Target = Join-Path $targetDirectory ($targetVideoBase + $video.Extension.ToLowerInvariant()) })
-        foreach ($sidecar in Get-AssociatedSidecars $video) {
+        foreach ($sidecar in $sidecars) {
             $targetName = Get-SidecarTargetName -Sidecar $sidecar -Video $video -TargetVideoBase $targetVideoBase
             $plan.Add([pscustomobject]@{ Source = $sidecar.FullName; Target = Join-Path $targetDirectory $targetName })
         }
@@ -1332,6 +1765,16 @@ function Invoke-SelfTest {
     $ep = Get-EpisodeInfo 'Some Show 1x07.mkv'
     if ($null -eq $ep -or $ep.Season -ne 1 -or $ep.Episode -ne 7) { $failures.Add('1xYY episode parsing') }
     if ((Get-SafeName 'Movie: The / Test?') -ne 'Movie- The - Test-') { $failures.Add('Windows-safe names') }
+    $longTargetDirectory = 'C:\Media\Very Long Test Show (2026) [tmdbid-999]\Season 01'
+    $longTargetBase = 'Very Long Test Show (2026) S01E01-E12 ' + ('An Extremely Descriptive Episode Title + ' * 12)
+    $boundedTargetBase = Get-BoundedTargetBaseName -Directory $longTargetDirectory -BaseName $longTargetBase -Suffixes @('.mkv', '-thumb.jpg', '.nfo')
+    $boundedTargetBaseAgain = Get-BoundedTargetBaseName -Directory $longTargetDirectory -BaseName $longTargetBase -Suffixes @('.mkv', '-thumb.jpg', '.nfo')
+    $boundedVideoPath = Join-Path $longTargetDirectory ($boundedTargetBase + '.mkv')
+    $boundedThumbPath = Join-Path $longTargetDirectory ($boundedTargetBase + '-thumb.jpg')
+    if ($boundedTargetBase -ne $boundedTargetBaseAgain -or $boundedTargetBase -notmatch '-[a-f0-9]{8}$' -or
+        $boundedVideoPath.Length -gt $script:MaxTargetPathLength -or $boundedThumbPath.Length -gt $script:MaxTargetPathLength) {
+        $failures.Add('Deterministic target path shortening')
+    }
     $folderSeed = Get-SearchSeed 'Folder.Movie.2024' 'movie'
     if ($folderSeed.Query -ne 'Folder Movie' -or $folderSeed.Year -ne '2024') { $failures.Add('Folder search cleanup') }
     $extraFolderCases = @{
@@ -1356,6 +1799,25 @@ function Invoke-SelfTest {
         $sourceRoot = Join-Path $testRoot 'source'
         $destinationRoot = Join-Path $testRoot 'destination'
         [void](New-Item -ItemType Directory -Path $sourceRoot, $destinationRoot -Force)
+
+        $duplicateFormatRoot = Join-Path $sourceRoot 'duplicate formats'
+        [void](New-Item -ItemType Directory -Path $duplicateFormatRoot -Force)
+        $duplicateMkv = Join-Path $duplicateFormatRoot 'Test.Show.S01E01.mkv'
+        $duplicateMp4 = Join-Path $duplicateFormatRoot 'Test.Show.S01E01.mp4'
+        $uniqueMkv = Join-Path $duplicateFormatRoot 'Test.Show.S01E02.mkv'
+        [IO.File]::WriteAllText($duplicateMkv, ('m' * 40))
+        [IO.File]::WriteAllText($duplicateMp4, ('p' * 20))
+        [IO.File]::WriteAllText($uniqueMkv, ('u' * 10))
+        $duplicateVideos = @($duplicateMkv, $duplicateMp4, $uniqueMkv | ForEach-Object { Get-Item -LiteralPath $_ })
+        $formatAnalysis = Get-DuplicateVideoFormatAnalysis -Videos $duplicateVideos
+        $recommendedResolution = Resolve-DuplicateVideoFormats -Videos $duplicateVideos -SkipDialog
+        $mp4Resolution = Resolve-DuplicateVideoFormats -Videos $duplicateVideos -PreferredExtension '.mp4' -SkipDialog
+        if ($null -eq $formatAnalysis -or $formatAnalysis.GroupCount -ne 1 -or $formatAnalysis.RecommendedExtension -ne '.mkv' -or
+            $recommendedResolution.Videos.Count -ne 2 -or @($recommendedResolution.Videos | Where-Object { $_.FullName -eq $duplicateMkv }).Count -ne 1 -or
+            $mp4Resolution.Videos.Count -ne 2 -or @($mp4Resolution.Videos | Where-Object { $_.FullName -eq $duplicateMp4 }).Count -ne 1) {
+            $failures.Add('Duplicate video format recommendation and selection')
+        }
+
         $videoPath = Join-Path $sourceRoot 'Test.Movie.2024.1080p.mkv'
         $subtitlePath = Join-Path $sourceRoot 'Test.Movie.2024.1080p.en.srt'
         [IO.File]::WriteAllText($videoPath, 'test video')
@@ -1404,14 +1866,58 @@ function Invoke-SelfTest {
         [IO.File]::WriteAllText($collisionTarget, 'existing content')
         $collisionPlan = @([pscustomobject]@{ Source = $collisionSource; Target = $collisionTarget })
         $stoppedOnCollision = $false
+        $collisionMessage = ''
         try { [void](Invoke-TransferPlan -Plan $collisionPlan -Mode Copy -CollisionPolicy Stop) }
-        catch { $stoppedOnCollision = $true }
+        catch { $stoppedOnCollision = $true; $collisionMessage = $_.Exception.Message }
         $skipResult = Invoke-TransferPlan -Plan $collisionPlan -Mode Copy -CollisionPolicy Skip
-        if (-not $stoppedOnCollision -or $skipResult.Completed -ne 0 -or $skipResult.Skipped -ne 1 -or [IO.File]::ReadAllText($collisionTarget) -ne 'existing content') {
+        if (-not $stoppedOnCollision -or -not $collisionMessage.StartsWith("SAFE STOP:`r`n") -or -not $collisionMessage.Contains('Nothing was changed') -or
+            $skipResult.Completed -ne 0 -or $skipResult.Skipped -ne 1 -or [IO.File]::ReadAllText($collisionTarget) -ne 'existing content') {
             $failures.Add('Stop and skip collision handling')
         }
 
         $newTarget = Join-Path $destinationRoot 'new-target.txt'
+        $duplicateTargetMessage = ''
+        try {
+            [void](Invoke-TransferPlan -Plan @(
+                [pscustomobject]@{ Source = $duplicateMkv; Target = $newTarget },
+                [pscustomobject]@{ Source = $duplicateMp4; Target = $newTarget }
+            ) -Mode Copy -CollisionPolicy Skip -ShowProgress $false)
+        }
+        catch { $duplicateTargetMessage = $_.Exception.Message }
+        if (-not $duplicateTargetMessage.StartsWith("SAFE STOP:`r`n") -or -not $duplicateTargetMessage.Contains('more than one selected source file')) {
+            $failures.Add('Duplicate target safe-stop context')
+        }
+
+        $overlongTargetMessage = ''
+        $overlongTarget = Join-Path $destinationRoot (('x' * 260) + '.txt')
+        try {
+            [void](Invoke-TransferPlan -Plan @([pscustomobject]@{ Source = $collisionSource; Target = $overlongTarget }) -Mode Copy -CollisionPolicy Skip -ShowProgress $false)
+        }
+        catch { $overlongTargetMessage = $_.Exception.Message }
+        if (-not $overlongTargetMessage.StartsWith("SAFE STOP:`r`n") -or -not $overlongTargetMessage.Contains('too long for a reliable Windows transfer')) {
+            $failures.Add('Overlong target preflight')
+        }
+
+        Initialize-NativeFileTransfer
+        $nativePathMethod = [ReelArrange.NativeFileTransfer].GetMethod('NativePath', [Reflection.BindingFlags]'NonPublic, Static')
+        $longAbsolutePath = 'C:\' + (('nested-folder\' * 22)) + 'source.mkv'
+        $normalizedLongPath = [string]$nativePathMethod.Invoke($null, @($longAbsolutePath))
+        if ($longAbsolutePath.Length -le 260 -or -not $normalizedLongPath.StartsWith('\\?\')) {
+            $failures.Add('Extended native source path')
+        }
+
+        $missingSourceMessage = ''
+        $missingSource = Join-Path $sourceRoot 'missing-source.mkv'
+        $missingTarget = Join-Path $destinationRoot 'missing-target.mkv'
+        try {
+            [void](Invoke-TransferPlan -Plan @([pscustomobject]@{ Source = $missingSource; Target = $missingTarget }) -Mode Copy -CollisionPolicy Skip -ShowProgress $false)
+        }
+        catch { $missingSourceMessage = $_.Exception.Message }
+        if (-not $missingSourceMessage.StartsWith("SAFE STOP:`r`n") -or -not $missingSourceMessage.Contains('Completed before the stop: 0 file(s)') -or
+            -not $missingSourceMessage.Contains('Copy mode leaves the original source files in place')) {
+            $failures.Add('Per-file transfer safe-stop context')
+        }
+
         $overwriteWithoutConflict = Invoke-TransferPlan -Plan @([pscustomobject]@{ Source = $collisionSource; Target = $newTarget }) -Mode Copy -CollisionPolicy Overwrite -ShowProgress $false
         if ($overwriteWithoutConflict.Completed -ne 1 -or $overwriteWithoutConflict.Overwritten -ne 0 -or [IO.File]::ReadAllText($newTarget) -ne 'new content') {
             $failures.Add('Overwrite transfer path')
@@ -1437,6 +1943,11 @@ function Invoke-SelfTest {
     Write-Output 'All self-tests passed.'
 }
 
+if ($About) {
+    Show-AboutDialog
+    exit 0
+}
+
 if ($SelfTest) {
     Invoke-SelfTest
     exit 0
@@ -1460,6 +1971,14 @@ try {
         if (-not ($script:VideoExtensions -contains $video.Extension.ToLowerInvariant())) {
             throw "This is not a supported video file: $($video.FullName)"
         }
+    }
+
+    $formatResolution = Resolve-DuplicateVideoFormats -Videos $videos
+    if ($null -eq $formatResolution) { exit 0 }
+    $videos = @($formatResolution.Videos)
+    if ($formatResolution.ExcludedCount -gt 0) {
+        Write-ActivityLog ("Duplicate video formats: kept {0}; excluded {1} alternate video file(s) across {2} duplicate name(s)." -f
+            $formatResolution.PreferredExtension, $formatResolution.ExcludedCount, $formatResolution.DuplicateGroupCount)
     }
 
     $credential = Get-TmdbCredential $settings

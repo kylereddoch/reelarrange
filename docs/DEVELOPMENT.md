@@ -37,7 +37,12 @@ The application has a `-SelfTest` mode that bypasses all dialogs and TMDB access
 - Movie version naming.
 - Movie folder, sidecar, artwork, and featurette planning.
 - Show-level and season-level extras planning.
+- Duplicate video-format analysis, recommendation, and selection.
+- Deterministic target-path shortening and extended native path normalization.
 - Stop and add-missing collision behavior.
+- Safe-stop message context for existing and internally duplicated destinations.
+- Per-file transfer-failure context and overlong-plan preflight behavior.
+- PNG transparency, ICO readability, executable icon embedding, and version metadata alignment.
 - Native copy and move transfer paths.
 
 CI runs on `windows-latest` using Windows PowerShell.

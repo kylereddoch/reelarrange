@@ -12,12 +12,18 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $sourceScript = Join-Path $projectRoot 'src\ReelArrange.ps1'
 $launcherSource = Join-Path $projectRoot 'src\ReelArrangeLauncher.cs'
 $versionPath = Join-Path $projectRoot 'VERSION'
+$logoIcon = Join-Path $projectRoot 'assets\ReelArrange.ico'
+$logoPng = Join-Path $projectRoot 'assets\ReelArrange.png'
 $compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $desktop = [Environment]::GetFolderPath('Desktop')
 $shortcutPath = Join-Path $desktop 'ReelArrange.lnk'
+$startMenuPrograms = [Environment]::GetFolderPath('Programs')
+$startMenuFolder = Join-Path $startMenuPrograms 'ReelArrange'
+$startMenuShortcut = Join-Path $startMenuFolder 'ReelArrange.lnk'
+$startMenuAboutShortcut = Join-Path $startMenuFolder 'About ReelArrange.lnk'
 $legacyShortcutPath = Join-Path $desktop 'Jellyfin Media Prep.lnk'
 
-foreach ($required in @($sourceScript, $launcherSource, $versionPath, $compiler)) {
+foreach ($required in @($sourceScript, $launcherSource, $versionPath, $logoIcon, $logoPng, $compiler)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Required installation file is missing: $required"
     }
@@ -45,11 +51,15 @@ Copy-Item -LiteralPath $sourceScript -Destination $installedScript -Force
 Copy-Item -LiteralPath $versionPath -Destination (Join-Path $InstallRoot 'VERSION') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $InstallRoot 'LICENSE') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'NOTICE.md') -Destination (Join-Path $InstallRoot 'NOTICE.md') -Force
+$installedAssets = Join-Path $InstallRoot 'assets'
+if (-not (Test-Path -LiteralPath $installedAssets)) { New-Item -ItemType Directory -Path $installedAssets -Force | Out-Null }
+Copy-Item -LiteralPath $logoIcon -Destination (Join-Path $installedAssets 'ReelArrange.ico') -Force
+Copy-Item -LiteralPath $logoPng -Destination (Join-Path $installedAssets 'ReelArrange.png') -Force
 
 if (Test-Path -LiteralPath $temporaryLauncher) {
     Remove-Item -LiteralPath $temporaryLauncher -Force
 }
-& $compiler /nologo /target:winexe /optimize+ "/out:$temporaryLauncher" $launcherSource
+& $compiler /nologo /target:winexe /optimize+ "/win32icon:$logoIcon" "/out:$temporaryLauncher" $launcherSource
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $temporaryLauncher)) {
     throw 'The windowless launcher did not compile.'
 }
@@ -74,9 +84,28 @@ if (-not $NoDesktopShortcut) {
     $shortcut.Arguments = ''
     $shortcut.WorkingDirectory = $InstallRoot
     $shortcut.Description = 'Prepare movies and TV shows for Jellyfin using TMDB metadata'
-    $shortcut.IconLocation = "$env:SystemRoot\System32\imageres.dll,188"
+    $shortcut.IconLocation = "$installedLauncher,0"
     $shortcut.Save()
 }
+
+if (-not (Test-Path -LiteralPath $startMenuFolder)) {
+    New-Item -ItemType Directory -Path $startMenuFolder -Force | Out-Null
+}
+$menuShortcut = $wsh.CreateShortcut($startMenuShortcut)
+$menuShortcut.TargetPath = $installedLauncher
+$menuShortcut.Arguments = ''
+$menuShortcut.WorkingDirectory = $InstallRoot
+$menuShortcut.Description = 'Prepare movies and TV shows for Jellyfin using TMDB metadata'
+$menuShortcut.IconLocation = "$installedLauncher,0"
+$menuShortcut.Save()
+
+$aboutShortcut = $wsh.CreateShortcut($startMenuAboutShortcut)
+$aboutShortcut.TargetPath = $installedLauncher
+$aboutShortcut.Arguments = '--about'
+$aboutShortcut.WorkingDirectory = $InstallRoot
+$aboutShortcut.Description = 'About ReelArrange'
+$aboutShortcut.IconLocation = "$installedLauncher,0"
+$aboutShortcut.Save()
 
 if (Test-Path -LiteralPath $legacyShortcutPath -PathType Leaf) {
     try {
@@ -99,3 +128,4 @@ Write-Host ''
 Write-Host "ReelArrange $version installed successfully."
 Write-Host "Application: $installedLauncher"
 if (-not $NoDesktopShortcut) { Write-Host "Desktop shortcut: $shortcutPath" }
+Write-Host "Start menu: $startMenuFolder"

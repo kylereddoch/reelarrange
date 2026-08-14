@@ -14,6 +14,8 @@ if ($running.Count -gt 0) {
 
 $desktop = [Environment]::GetFolderPath('Desktop')
 $shortcutPath = Join-Path $desktop 'ReelArrange.lnk'
+$startMenuPrograms = [Environment]::GetFolderPath('Programs')
+$startMenuFolder = Join-Path $startMenuPrograms 'ReelArrange'
 $userDataRoot = Join-Path $env:LOCALAPPDATA 'ReelArrange'
 $expectedInstallParent = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs')).TrimEnd('\') + '\'
 $resolvedInstallRoot = [IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
@@ -28,6 +30,23 @@ if (Test-Path -LiteralPath $shortcutPath -PathType Leaf) {
     if ($shortcut.TargetPath -ieq (Join-Path $resolvedInstallRoot 'ReelArrange.exe')) {
         if ($PSCmdlet.ShouldProcess($shortcutPath, 'Remove Desktop shortcut')) {
             Remove-Item -LiteralPath $shortcutPath -Force
+        }
+    }
+}
+
+if (Test-Path -LiteralPath $startMenuFolder -PathType Container) {
+    $wsh = New-Object -ComObject WScript.Shell
+    foreach ($menuShortcutPath in @(Get-ChildItem -LiteralPath $startMenuFolder -File -Filter '*.lnk' | ForEach-Object { $_.FullName })) {
+        $menuShortcut = $wsh.CreateShortcut($menuShortcutPath)
+        if ($menuShortcut.TargetPath -ieq (Join-Path $resolvedInstallRoot 'ReelArrange.exe')) {
+            if ($PSCmdlet.ShouldProcess($menuShortcutPath, 'Remove Start menu shortcut')) {
+                Remove-Item -LiteralPath $menuShortcutPath -Force
+            }
+        }
+    }
+    if (@(Get-ChildItem -LiteralPath $startMenuFolder -Force).Count -eq 0) {
+        if ($PSCmdlet.ShouldProcess($startMenuFolder, 'Remove empty Start menu folder')) {
+            Remove-Item -LiteralPath $startMenuFolder -Force
         }
     }
 }
@@ -47,7 +66,12 @@ if ($RemoveUserData -and (Test-Path -LiteralPath $userDataRoot -PathType Contain
     }
 }
 
-Write-Host 'ReelArrange was uninstalled.'
-if (-not $RemoveUserData) {
-    Write-Host "Settings and logs were kept at $userDataRoot"
+if ($WhatIfPreference) {
+    Write-Host 'Uninstall preview completed. Nothing was removed.'
+}
+else {
+    Write-Host 'ReelArrange was uninstalled.'
+    if (-not $RemoveUserData) {
+        Write-Host "Settings and logs were kept at $userDataRoot"
+    }
 }

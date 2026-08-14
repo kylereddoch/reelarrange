@@ -4,6 +4,8 @@
 
 ReelArrange prepares downloaded movies and TV shows for a Jellyfin library. It identifies the title with TMDB, creates a proposed destination layout, and transfers the selected media only after confirmation.
 
+The installed app is available from both the Desktop and the **ReelArrange** Start menu folder. The Start menu also includes **About ReelArrange**, which opens the About window without starting a media-planning workflow.
+
 ## Preparing a movie
 
 1. Choose **Movie**.
@@ -55,6 +57,18 @@ Recognized root and season artwork includes common names such as `poster`, `cove
 
 Subtitles, NFO files, and artwork whose filenames match the selected video are renamed with the video and transferred beside it.
 
+## Duplicate video formats
+
+Some downloads contain the same episode or movie in more than one container, such as matching MKV and MP4 files with identical base names. ReelArrange detects these sets before TMDB lookup and asks which format to keep in the plan.
+
+The dialog shows file counts, combined sizes, duplicate-name coverage, and how often each format is the largest candidate. The preselected recommendation favors complete coverage and larger files. This is a practical recommendation only; ReelArrange does not inspect codecs, bitrates, audio tracks, or subtitle streams. Choosing a format excludes the alternate video copies from the plan but never changes the source files.
+
+## Long titles and paths
+
+TMDB can return very long combined titles for files containing many episodes. ReelArrange shortens only filenames that would push the complete destination beyond reliable Windows path limits. The shortened name keeps the show and episode identifier at the front and ends with a stable eight-character suffix so separate titles do not collapse onto the same destination.
+
+The transfer layer also supports extended absolute local and UNC source paths. If the selected destination root is itself too long to leave room for a useful filename, ReelArrange stops during planning and asks for a shorter root before transferring anything.
+
 ## Existing destinations
 
 ### Add missing files
@@ -63,11 +77,13 @@ Existing destinations remain untouched. Only absent planned files are transferre
 
 ### Stop
 
-Any collision stops the complete operation before a transfer begins.
+Any collision stops the complete operation before a transfer begins. The safe-stop dialog explains the cause, confirms that nothing changed, suggests next actions, and shows a limited sample rather than an unreadable full path list.
 
 ### Overwrite
 
 Missing destinations are handled first. ReelArrange then shows the exact number and a sample of paths that would be replaced. Choosing No cancels without replacing them.
+
+If an individual file fails during Copy or Move, the safe-stop dialog identifies that source and destination, reports how many files completed, and explains whether earlier source files remain. After correcting the problem, rerun with **Add missing files** to preserve completed destinations and continue with absent files.
 
 ## Copy and move behavior
 
@@ -84,3 +100,7 @@ The activity log is located at:
 ```
 
 Each completed file transfer is logged after the operation returns successfully. A destination file may appear at its full final size while Windows is still writing data; use the transfer-status window rather than Explorer alone to determine completion.
+
+## About and version
+
+Choose **About** on ReelArrange's opening window to see the application logo, current version, short product description, author, license and service notices, and repository link. The same window is available through **About ReelArrange** in the Start menu.

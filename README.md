@@ -68,6 +68,8 @@ ReelArrange does not need to run on the Jellyfin server itself. A mapped drive o
 
 ## Installation
 
+The packaged ZIP includes a ready-to-run, icon-bearing `ReelArrange.exe` beside the PowerShell application and assets. It can be launched directly from the extracted folder.
+
 Clone or download the repository, open Windows PowerShell in the project folder, and run:
 
 ```powershell
@@ -78,18 +80,19 @@ Set-ExecutionPolicy -Scope Process Bypass
 The installer:
 
 1. Parses and tests the PowerShell application.
-2. Builds a small windowless launcher from the included C# source.
-3. Installs the runnable files under `%LOCALAPPDATA%\Programs\ReelArrange`.
+2. Builds an icon-bearing windowless executable from the included C# source.
+3. Installs the executable, PowerShell application, logo, and notices under `%LOCALAPPDATA%\Programs\ReelArrange`.
 4. Creates a **ReelArrange** shortcut on the current user's Desktop.
-5. Migrates settings from the original private “Jellyfin Media Prep” build when found.
+5. Creates **ReelArrange** and **About ReelArrange** shortcuts in the current user's Start menu.
+6. Migrates settings from the original private “Jellyfin Media Prep” build when found.
 
-The Desktop shortcut does not depend on the repository remaining in the same location.
+The installed Desktop and Start menu shortcuts do not depend on the repository remaining in the same location. Their icon comes from the installed ReelArrange executable.
 
 To upgrade after pulling a newer version, run `scripts\install.ps1` again.
 
 ## First run
 
-1. Open **ReelArrange** from the Desktop.
+1. Open **ReelArrange** from the Desktop or Start menu.
 2. Choose Movie or TV show.
 3. Select a file or complete release folder.
 4. Paste a TMDB API Read Access Token when prompted. The dialog links directly to TMDB's API settings page.
@@ -100,6 +103,10 @@ To upgrade after pulling a newer version, run `scripts\install.ps1` again.
 
 Selecting a complete release folder is recommended when the download contains extras or artwork. If a movie file is selected directly, ReelArrange detects recognized sibling extras folders and asks whether to include them.
 
+If a folder contains same-named videos in multiple formats, such as matching MKV and MP4 copies of every episode, ReelArrange pauses before TMDB lookup and asks which format to keep. It recommends the format with the best episode coverage and larger source files, while making clear that file size is only a practical signal and not a full quality inspection. Unselected video copies remain untouched in the source folder.
+
+Very long movie or multi-episode titles are shortened deterministically before transfer. ReelArrange preserves the identifying show and episode prefix, then adds a stable suffix to avoid collisions while keeping the complete destination path within reliable Windows limits.
+
 ## Existing-file behavior
 
 ReelArrange offers three policies:
@@ -108,12 +115,20 @@ ReelArrange offers three policies:
 - **Stop if any destination file exists** — changes nothing when a collision is found.
 - **Overwrite existing files** — transfers missing files first, then displays a final warning before replacing existing destinations.
 
+When ReelArrange stops safely, the dialog explains the reason, confirms that no files changed, suggests the appropriate next step, and shows only a manageable sample of conflicting paths.
+
+If a transfer stops after some files complete, run the same source again with **Add missing files**. Completed destinations remain untouched and only absent files are transferred.
+
 ## Copy versus move
 
 - **Copy** leaves the download intact and is the recommended choice while seeding.
 - **Move** removes successfully transferred source files. Cross-drive moves can take several minutes for large files.
 
 The transfer window reports the current file, byte percentage, transferred size, and overall file count.
+
+## About ReelArrange
+
+Choose **About** from ReelArrange's opening window or **About ReelArrange** from the Start menu. The short About window shows the current version, what ReelArrange does, the author, license and service notices, and a link to the project repository.
 
 ## Settings, logs, and privacy
 
@@ -132,7 +147,7 @@ From the repository:
 .\scripts\uninstall.ps1
 ```
 
-The uninstaller removes the installed application and Desktop shortcut but keeps settings and logs by default. To remove those too:
+The uninstaller removes the installed application plus its Desktop and Start menu shortcuts, but keeps settings and logs by default. To remove those too:
 
 ```powershell
 .\scripts\uninstall.ps1 -RemoveUserData
@@ -157,7 +172,7 @@ See [Development](docs/DEVELOPMENT.md), [Architecture](docs/ARCHITECTURE.md), an
 
 ## Project status
 
-The current version is `0.1.0`. See [CHANGELOG.md](CHANGELOG.md) for changes and planned compatibility notes.
+The current version is `0.2.0`. See [CHANGELOG.md](CHANGELOG.md) for changes and planned compatibility notes.
 
 ## License and service notices
 

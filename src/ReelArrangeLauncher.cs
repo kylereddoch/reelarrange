@@ -1,7 +1,16 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
+
+[assembly: AssemblyTitle("ReelArrange")]
+[assembly: AssemblyProduct("ReelArrange")]
+[assembly: AssemblyCompany("CybersecKyle")]
+[assembly: AssemblyDescription("Prepare downloaded movies and TV shows for a Jellyfin media library")]
+[assembly: AssemblyCopyright("Copyright (c) Kyle Reddoch")]
+[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.2.0.0")]
 
 internal static class ReelArrangeLauncher
 {
@@ -9,7 +18,7 @@ internal static class ReelArrangeLauncher
     private static extern int MessageBox(IntPtr window, string text, string caption, uint type);
 
     [STAThread]
-    private static int Main()
+    private static int Main(string[] arguments)
     {
         string launcherDirectory = AppDomain.CurrentDomain.BaseDirectory;
         string scriptPath = Path.Combine(launcherDirectory, "ReelArrange.ps1");
@@ -27,7 +36,17 @@ internal static class ReelArrangeLauncher
 
         ProcessStartInfo startInfo = new ProcessStartInfo();
         startInfo.FileName = powerShellPath;
-        startInfo.Arguments = "-NoProfile -STA -ExecutionPolicy Bypass -File \"" + scriptPath + "\"";
+        string scriptArguments = "";
+        foreach (string argument in arguments)
+        {
+            if (String.Equals(argument, "--about", StringComparison.OrdinalIgnoreCase) ||
+                String.Equals(argument, "/about", StringComparison.OrdinalIgnoreCase))
+            {
+                scriptArguments = " -About";
+                break;
+            }
+        }
+        startInfo.Arguments = "-NoProfile -STA -ExecutionPolicy Bypass -File \"" + scriptPath + "\"" + scriptArguments;
         startInfo.WorkingDirectory = launcherDirectory;
         startInfo.UseShellExecute = false;
         startInfo.CreateNoWindow = true;

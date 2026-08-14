@@ -10,9 +10,13 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $sourceScript = Join-Path $projectRoot 'src\ReelArrange.ps1'
 $launcherSource = Join-Path $projectRoot 'src\ReelArrangeLauncher.cs'
+$logoIcon = Join-Path $projectRoot 'assets\ReelArrange.ico'
+$logoPng = Join-Path $projectRoot 'assets\ReelArrange.png'
 $requiredFiles = @(
     $sourceScript,
     $launcherSource,
+    $logoIcon,
+    $logoPng,
     (Join-Path $projectRoot 'README.md'),
     (Join-Path $projectRoot 'LICENSE'),
     (Join-Path $projectRoot 'SECURITY.md'),
@@ -26,6 +30,27 @@ foreach ($required in $requiredFiles) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Required project file is missing: $required"
     }
+}
+
+$version = (Get-Content -LiteralPath (Join-Path $projectRoot 'VERSION') -Raw).Trim()
+if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION is not semantic: $version" }
+
+Add-Type -AssemblyName System.Drawing
+$logoImage = New-Object Drawing.Bitmap $logoPng
+try {
+    if ($logoImage.Width -lt 256 -or $logoImage.Height -lt 256 -or $logoImage.PixelFormat -notmatch 'Argb' -or $logoImage.GetPixel(0, 0).A -ne 0) {
+        throw 'The ReelArrange PNG logo must be at least 256x256 with alpha transparency.'
+    }
+}
+finally {
+    $logoImage.Dispose()
+}
+$logoResource = New-Object Drawing.Icon $logoIcon
+try {
+    if ($logoResource.Width -lt 16 -or $logoResource.Height -lt 16) { throw 'The ReelArrange ICO resource is invalid.' }
+}
+finally {
+    $logoResource.Dispose()
 }
 
 $tokens = $null
@@ -58,9 +83,13 @@ $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 try {
     New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
     $testLauncher = Join-Path $testRoot 'ReelArrange.exe'
-    & $compiler /nologo /target:winexe /optimize+ "/out:$testLauncher" $launcherSource
+    & $compiler /nologo /target:winexe /optimize+ "/win32icon:$logoIcon" "/out:$testLauncher" $launcherSource
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $testLauncher -PathType Leaf)) {
         throw 'Launcher compilation test failed.'
+    }
+    $fileInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($testLauncher)
+    if ($fileInfo.ProductName -ne 'ReelArrange' -or $fileInfo.FileVersion -ne "$version.0") {
+        throw "Launcher metadata is not aligned with VERSION. Product=$($fileInfo.ProductName), FileVersion=$($fileInfo.FileVersion)"
     }
 }
 finally {
@@ -69,8 +98,5 @@ finally {
         Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force
     }
 }
-
-$version = (Get-Content -LiteralPath (Join-Path $projectRoot 'VERSION') -Raw).Trim()
-if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION is not semantic: $version" }
 
 Write-Host "ReelArrange $version tests passed."

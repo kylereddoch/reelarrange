@@ -11,6 +11,10 @@ $stageParent = Join-Path ([IO.Path]::GetTempPath()) ('ReelArrangePackage-' + [gu
 $stageRoot = Join-Path $stageParent "ReelArrange-$version"
 $archive = Join-Path $distRoot "ReelArrange-$version.zip"
 $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+$compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$launcherSource = Join-Path $projectRoot 'src\ReelArrangeLauncher.cs'
+$sourceScript = Join-Path $projectRoot 'src\ReelArrange.ps1'
+$logoIcon = Join-Path $projectRoot 'assets\ReelArrange.ico'
 
 & (Join-Path $PSScriptRoot 'test.ps1')
 if ($LASTEXITCODE -ne 0) { throw 'Tests failed; package creation was stopped.' }
@@ -20,8 +24,14 @@ try {
     foreach ($file in @('README.md', 'LICENSE', 'NOTICE.md', 'VERSION', 'CHANGELOG.md', 'SECURITY.md', 'SUPPORT.md')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot $file) -Destination (Join-Path $stageRoot $file)
     }
-    foreach ($directory in @('src', 'scripts', 'docs')) {
+    foreach ($directory in @('src', 'scripts', 'docs', 'assets')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot $directory) -Destination (Join-Path $stageRoot $directory) -Recurse
+    }
+    Copy-Item -LiteralPath $sourceScript -Destination (Join-Path $stageRoot 'ReelArrange.ps1')
+    $portableLauncher = Join-Path $stageRoot 'ReelArrange.exe'
+    & $compiler /nologo /target:winexe /optimize+ "/win32icon:$logoIcon" "/out:$portableLauncher" $launcherSource
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $portableLauncher -PathType Leaf)) {
+        throw 'The portable ReelArrange executable did not compile.'
     }
     if (-not (Test-Path -LiteralPath $distRoot)) { New-Item -ItemType Directory -Path $distRoot -Force | Out-Null }
     if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }

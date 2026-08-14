@@ -3,9 +3,9 @@
 ## Components
 
 ```text
-Desktop shortcut
+Desktop or Start menu shortcut
     ↓
-ReelArrange.exe (windowless C# launcher)
+ReelArrange.exe (icon-bearing windowless C# launcher)
     ↓
 ReelArrange.ps1 (PowerShell 5.1 + WinForms)
     ├── Source selection and filename parsing
@@ -15,7 +15,9 @@ ReelArrange.ps1 (PowerShell 5.1 + WinForms)
     └── Native Windows file transfer with progress callbacks
 ```
 
-The launcher is a minimal Windows GUI-subsystem executable. It starts Windows PowerShell without allocating a console, waits for the script to exit, and returns the same exit code.
+The launcher is a minimal Windows GUI-subsystem executable with ReelArrange product metadata and an embedded multi-resolution icon. It starts Windows PowerShell without allocating a console, waits for the script to exit, and returns the same exit code. The `--about` launcher option opens the About window directly.
+
+The installed `assets` folder provides the PNG used inside the About window and the ICO used by WinForms. The installer creates a Desktop shortcut plus launch and About entries under the current user's Start menu.
 
 ## Data flow
 
