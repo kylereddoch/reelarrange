@@ -1,31 +1,36 @@
 using System;
-using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 [assembly: AssemblyTitle("ReelArrange")]
 [assembly: AssemblyProduct("ReelArrange")]
 [assembly: AssemblyCompany("CybersecKyle")]
 [assembly: AssemblyDescription("Prepare downloaded movies and TV shows for a Jellyfin media library")]
 [assembly: AssemblyCopyright("Copyright (c) Kyle Reddoch")]
-[assembly: AssemblyVersion("0.2.0.0")]
-[assembly: AssemblyFileVersion("0.2.0.0")]
+[assembly: AssemblyVersion("0.3.0.0")]
+[assembly: AssemblyFileVersion("0.3.0.0")]
 
 internal static class ReelArrangeLauncher
 {
+    private const string AppUserModelId = "CybersecKyle.ReelArrange";
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(IntPtr window, string text, string caption, uint type);
+
+    [DllImport("shell32.dll", SetLastError = true)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID(
+        [MarshalAs(UnmanagedType.LPWStr)] string appId);
 
     [STAThread]
     private static int Main(string[] arguments)
     {
         string launcherDirectory = AppDomain.CurrentDomain.BaseDirectory;
         string scriptPath = Path.Combine(launcherDirectory, "ReelArrange.ps1");
-        string powerShellPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.System),
-            @"WindowsPowerShell\v1.0\powershell.exe"
-        );
 
         if (!File.Exists(scriptPath))
         {
@@ -34,30 +39,44 @@ internal static class ReelArrangeLauncher
             return 1;
         }
 
-        ProcessStartInfo startInfo = new ProcessStartInfo();
-        startInfo.FileName = powerShellPath;
-        string scriptArguments = "";
-        foreach (string argument in arguments)
-        {
-            if (String.Equals(argument, "--about", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(argument, "/about", StringComparison.OrdinalIgnoreCase))
-            {
-                scriptArguments = " -About";
-                break;
-            }
-        }
-        startInfo.Arguments = "-NoProfile -STA -ExecutionPolicy Bypass -File \"" + scriptPath + "\"" + scriptArguments;
-        startInfo.WorkingDirectory = launcherDirectory;
-        startInfo.UseShellExecute = false;
-        startInfo.CreateNoWindow = true;
+        bool showAbout = arguments.Any(argument =>
+            String.Equals(argument, "--about", StringComparison.OrdinalIgnoreCase) ||
+            String.Equals(argument, "/about", StringComparison.OrdinalIgnoreCase));
+        bool runSelfTest = arguments.Any(argument =>
+            String.Equals(argument, "--self-test", StringComparison.OrdinalIgnoreCase));
 
         try
         {
-            using (Process process = Process.Start(startInfo))
+            SetCurrentProcessExplicitAppUserModelID(AppUserModelId);
+
+            using (Runspace runspace = RunspaceFactory.CreateRunspace())
             {
-                process.WaitForExit();
-                return process.ExitCode;
+                runspace.ApartmentState = ApartmentState.STA;
+                runspace.ThreadOptions = PSThreadOptions.UseCurrentThread;
+                runspace.Open();
+                runspace.SessionStateProxy.Path.SetLocation(launcherDirectory);
+
+                using (PowerShell powerShell = PowerShell.Create())
+                {
+                    powerShell.Runspace = runspace;
+                    powerShell.AddCommand(scriptPath);
+                    if (showAbout) { powerShell.AddParameter("About"); }
+                    if (runSelfTest) { powerShell.AddParameter("SelfTest"); }
+                    powerShell.Invoke();
+
+                    if (powerShell.HadErrors)
+                    {
+                        string message = powerShell.Streams.Error.Count > 0
+                            ? powerShell.Streams.Error[powerShell.Streams.Error.Count - 1].ToString()
+                            : "The embedded PowerShell workflow reported an unknown error.";
+                        MessageBox(IntPtr.Zero, "ReelArrange could not start:\r\n\r\n" + message,
+                            "ReelArrange", 0x10);
+                        return 1;
+                    }
+                }
             }
+
+            return 0;
         }
         catch (Exception exception)
         {

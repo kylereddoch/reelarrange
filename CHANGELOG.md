@@ -13,6 +13,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Expanded episode-pattern fixtures.
 - Localization groundwork.
 
+## [0.3.0] - 2026-08-18
+
+### Added
+
+- TMDB Season 00 recommendations for unnumbered files and filenames whose parsed regular-season episode does not exist in TMDB. ReelArrange asks for confirmation and shows the assignment again in the destination preview before transferring anything.
+- A **Process another** completion option that returns to the Movie/TV selection screen without closing ReelArrange.
+
+### Changed
+
+- Replaced the legacy tree-style folder browser with the modern Windows Explorer folder picker for media sources and Jellyfin destinations.
+- Movie and TV source selection now reopens at the most recently used source folder.
+- TV episode detection now understands compact archive numbering such as `101`, `203`, and combined files such as `101 102`.
+- TV search cleanup now handles archive folder names such as `WishboneTVSeries19951997` without requiring the user to rewrite the title.
+- The Windows executable now hosts the PowerShell workflow in-process, giving ReelArrange its own taskbar identity and icon instead of inheriting the PowerShell icon.
+
+### Fixed
+
+- Batch TV planning now gives useful context for filenames it cannot identify instead of ending with only a generic no-episode-number error.
+
 ## [0.2.0] - 2026-08-14
 
 ### Added
@@ -50,6 +69,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Windowless launcher and Desktop installer.
 - Built-in self-tests and Windows GitHub Actions workflow.
 
-[Unreleased]: https://github.com/kylereddoch/reelarrange/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/kylereddoch/reelarrange/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/kylereddoch/reelarrange/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/kylereddoch/reelarrange/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/kylereddoch/reelarrange/releases/tag/v0.1.0

@@ -12,6 +12,8 @@ $stageRoot = Join-Path $stageParent "ReelArrange-$version"
 $archive = Join-Path $distRoot "ReelArrange-$version.zip"
 $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 $compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$automationAssembly = (& $windowsPowerShell -NoProfile -Command '[Management.Automation.PSObject].Assembly.Location').Trim()
 $launcherSource = Join-Path $projectRoot 'src\ReelArrangeLauncher.cs'
 $sourceScript = Join-Path $projectRoot 'src\ReelArrange.ps1'
 $logoIcon = Join-Path $projectRoot 'assets\ReelArrange.ico'
@@ -29,7 +31,7 @@ try {
     }
     Copy-Item -LiteralPath $sourceScript -Destination (Join-Path $stageRoot 'ReelArrange.ps1')
     $portableLauncher = Join-Path $stageRoot 'ReelArrange.exe'
-    & $compiler /nologo /target:winexe /optimize+ "/win32icon:$logoIcon" "/out:$portableLauncher" $launcherSource
+    & $compiler /nologo /target:winexe /optimize+ "/reference:$automationAssembly" "/win32icon:$logoIcon" "/out:$portableLauncher" $launcherSource
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $portableLauncher -PathType Leaf)) {
         throw 'The portable ReelArrange executable did not compile.'
     }

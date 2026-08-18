@@ -15,6 +15,8 @@ $versionPath = Join-Path $projectRoot 'VERSION'
 $logoIcon = Join-Path $projectRoot 'assets\ReelArrange.ico'
 $logoPng = Join-Path $projectRoot 'assets\ReelArrange.png'
 $compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$automationAssembly = (& $windowsPowerShell -NoProfile -Command '[Management.Automation.PSObject].Assembly.Location').Trim()
 $desktop = [Environment]::GetFolderPath('Desktop')
 $shortcutPath = Join-Path $desktop 'ReelArrange.lnk'
 $startMenuPrograms = [Environment]::GetFolderPath('Programs')
@@ -23,7 +25,7 @@ $startMenuShortcut = Join-Path $startMenuFolder 'ReelArrange.lnk'
 $startMenuAboutShortcut = Join-Path $startMenuFolder 'About ReelArrange.lnk'
 $legacyShortcutPath = Join-Path $desktop 'Jellyfin Media Prep.lnk'
 
-foreach ($required in @($sourceScript, $launcherSource, $versionPath, $logoIcon, $logoPng, $compiler)) {
+foreach ($required in @($sourceScript, $launcherSource, $versionPath, $logoIcon, $logoPng, $compiler, $windowsPowerShell, $automationAssembly)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Required installation file is missing: $required"
     }
@@ -59,7 +61,7 @@ Copy-Item -LiteralPath $logoPng -Destination (Join-Path $installedAssets 'ReelAr
 if (Test-Path -LiteralPath $temporaryLauncher) {
     Remove-Item -LiteralPath $temporaryLauncher -Force
 }
-& $compiler /nologo /target:winexe /optimize+ "/win32icon:$logoIcon" "/out:$temporaryLauncher" $launcherSource
+& $compiler /nologo /target:winexe /optimize+ "/reference:$automationAssembly" "/win32icon:$logoIcon" "/out:$temporaryLauncher" $launcherSource
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $temporaryLauncher)) {
     throw 'The windowless launcher did not compile.'
 }

@@ -77,19 +77,28 @@ $compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
     throw 'The .NET Framework C# compiler was not found.'
 }
+$automationAssembly = (& $windowsPowerShell -NoProfile -Command '[Management.Automation.PSObject].Assembly.Location').Trim()
+if (-not (Test-Path -LiteralPath $automationAssembly -PathType Leaf)) {
+    throw 'The Windows PowerShell automation assembly was not found.'
+}
 
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('ReelArrangeBuildTest-' + [guid]::NewGuid().ToString('N'))
 $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 try {
     New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
     $testLauncher = Join-Path $testRoot 'ReelArrange.exe'
-    & $compiler /nologo /target:winexe /optimize+ "/win32icon:$logoIcon" "/out:$testLauncher" $launcherSource
+    & $compiler /nologo /target:winexe /optimize+ "/reference:$automationAssembly" "/win32icon:$logoIcon" "/out:$testLauncher" $launcherSource
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $testLauncher -PathType Leaf)) {
         throw 'Launcher compilation test failed.'
     }
     $fileInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($testLauncher)
     if ($fileInfo.ProductName -ne 'ReelArrange' -or $fileInfo.FileVersion -ne "$version.0") {
         throw "Launcher metadata is not aligned with VERSION. Product=$($fileInfo.ProductName), FileVersion=$($fileInfo.FileVersion)"
+    }
+    Copy-Item -LiteralPath $sourceScript -Destination (Join-Path $testRoot 'ReelArrange.ps1')
+    $launcherTest = Start-Process -FilePath $testLauncher -ArgumentList '--self-test' -Wait -PassThru
+    if ($launcherTest.ExitCode -ne 0) {
+        throw "In-process launcher self-test failed with exit code $($launcherTest.ExitCode)."
     }
 }
 finally {

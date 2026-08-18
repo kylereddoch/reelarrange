@@ -17,8 +17,11 @@ The installed app is available from both the Desktop and the **ReelArrange** Sta
 7. Choose how existing destinations should be handled.
 8. Inspect every planned destination in the preview.
 9. Start the transfer.
+10. When it finishes, choose **Process another** to return to the Movie/TV screen or **Close** to exit ReelArrange.
 
 For a complete release containing artwork or extras, selecting the folder is the most reliable option.
+
+The folder picker uses the normal Windows Explorer layout, so you can use the sidebar, browse drives, or paste a path into the address bar. ReelArrange remembers the most recently used movie source folder and opens there the next time you prepare a movie.
 
 ## Preparing television
 
@@ -29,7 +32,11 @@ For a complete release containing artwork or extras, selecting the folder is the
 5. Choose the Jellyfin Shows library root and transfer behavior.
 6. Inspect the preview and start the transfer.
 
-Episode filenames should normally contain `S01E01` or `1x01`. A single unnumbered file prompts for season and episode. Unnumbered files in a batch are reported and skipped unless the user cancels.
+Episode filenames can contain `S01E01`, `1x01`, or compact archive numbering such as `101` for Season 1 Episode 1. Combined files such as `101 102` are treated as `S01E01-E02`.
+
+For an unnumbered file, or a parsed regular-season episode that does not exist in TMDB, ReelArrange compares the filename with TMDB's Season 00 titles. When it finds a clear match, it recommends the special and asks you to approve the assignment. The approved Season 00 destination is shown again in the full preview before any files are transferred. A single file without a clear match can still be assigned manually; unidentified files in a batch are listed so you can rename them and rerun the source safely.
+
+TV source selection uses the same Explorer-style folder picker and remembers its last location separately from movie sources. The destination **Browse...** button also uses this modern picker.
 
 ## Extras
 

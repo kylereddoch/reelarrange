@@ -49,7 +49,7 @@ CI runs on `windows-latest` using Windows PowerShell.
 
 ## Building the launcher
 
-The installer compiles `src\ReelArrangeLauncher.cs` with the .NET Framework C# compiler included with Windows. Generated executables belong in the installation directory or `dist/`, never in source control.
+The installer compiles `src\ReelArrangeLauncher.cs` with the .NET Framework C# compiler included with Windows and references the Windows PowerShell 5.1 automation assembly. The launcher hosts the script in-process on an STA runspace, which keeps the GUI under the ReelArrange executable and taskbar identity. Generated executables belong in the installation directory or `dist/`, never in source control.
 
 ## Packaging
 

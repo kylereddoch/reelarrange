@@ -41,6 +41,76 @@ function Show-InfoMessage {
     [void][System.Windows.Forms.MessageBox]::Show($Message, $script:AppName, 'OK', 'Information')
 }
 
+function Show-CompletionDialog {
+    param([string]$Message)
+
+    $form = New-Object System.Windows.Forms.Form
+    Set-FormBranding $form
+    $form.Text = "$script:AppName - Transfer complete"
+    $form.Size = New-Object Drawing.Size(650, 430)
+    $form.StartPosition = 'CenterScreen'
+    $form.FormBorderStyle = 'FixedDialog'
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+    $form.Tag = $false
+
+    $icon = New-Object System.Windows.Forms.PictureBox
+    $icon.Location = New-Object Drawing.Point(24, 22)
+    $icon.Size = New-Object Drawing.Size(48, 48)
+    $icon.SizeMode = 'CenterImage'
+    $icon.Image = [Drawing.SystemIcons]::Information.ToBitmap()
+    $form.Controls.Add($icon)
+
+    $heading = New-Object System.Windows.Forms.Label
+    $heading.Location = New-Object Drawing.Point(88, 25)
+    $heading.Size = New-Object Drawing.Size(510, 30)
+    $heading.Text = 'Transfer complete'
+    $heading.Font = New-Object Drawing.Font('Segoe UI', 14, [Drawing.FontStyle]::Bold)
+    $form.Controls.Add($heading)
+
+    $prompt = New-Object System.Windows.Forms.Label
+    $prompt.Location = New-Object Drawing.Point(91, 57)
+    $prompt.Size = New-Object Drawing.Size(500, 24)
+    $prompt.Text = 'You can prepare another movie or TV show without reopening ReelArrange.'
+    $form.Controls.Add($prompt)
+
+    $details = New-Object System.Windows.Forms.TextBox
+    $details.Location = New-Object Drawing.Point(24, 96)
+    $details.Size = New-Object Drawing.Size(590, 220)
+    $details.Multiline = $true
+    $details.ReadOnly = $true
+    $details.ScrollBars = 'Vertical'
+    $details.BackColor = [Drawing.SystemColors]::Window
+    $details.Text = $Message
+    $form.Controls.Add($details)
+
+    $another = New-Object System.Windows.Forms.Button
+    $another.Location = New-Object Drawing.Point(348, 338)
+    $another.Size = New-Object Drawing.Size(145, 34)
+    $another.Text = 'Process another'
+    $another.Add_Click({
+        $form.Tag = $true
+        $form.DialogResult = 'OK'
+        $form.Close()
+    })
+    $form.Controls.Add($another)
+    $form.AcceptButton = $another
+
+    $close = New-Object System.Windows.Forms.Button
+    $close.Location = New-Object Drawing.Point(503, 338)
+    $close.Size = New-Object Drawing.Size(110, 34)
+    $close.Text = 'Close'
+    $close.DialogResult = 'Cancel'
+    $form.Controls.Add($close)
+    $form.CancelButton = $close
+
+    [void]$form.ShowDialog()
+    $processAnother = [bool]$form.Tag
+    if ($null -ne $icon.Image) { $icon.Image.Dispose() }
+    $form.Dispose()
+    return $processAnother
+}
+
 function Get-AppResourcePath {
     param([string]$RelativePath)
     $candidates = @(
@@ -76,6 +146,184 @@ function Set-FormBranding {
     param([System.Windows.Forms.Form]$Form)
     $icon = Get-AppIcon
     if ($null -ne $icon) { $Form.Icon = $icon }
+}
+
+function Initialize-ModernFolderPicker {
+    if ($null -ne ('ReelArrange.ModernFolderPicker' -as [type])) { return }
+
+    Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+
+namespace ReelArrange
+{
+    [Flags]
+    internal enum FileOpenOptions : uint
+    {
+        NoChangeDirectory = 0x00000008,
+        PickFolders = 0x00000020,
+        ForceFileSystem = 0x00000040,
+        PathMustExist = 0x00000800
+    }
+
+    internal enum ShellItemDisplayName : uint
+    {
+        FileSystemPath = 0x80058000
+    }
+
+    [ComImport]
+    [Guid("DC1C5A9C-E88A-4DDE-A5A1-60F82A20AEF7")]
+    internal class FileOpenDialogClass
+    {
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("42F85136-DB7E-439C-85F1-E4075D135FC8")]
+    internal interface IFileDialog
+    {
+        [PreserveSig]
+        int Show(IntPtr parent);
+        void SetFileTypes(uint count, IntPtr filterSpec);
+        void SetFileTypeIndex(uint index);
+        void GetFileTypeIndex(out uint index);
+        void Advise(IntPtr events, out uint cookie);
+        void Unadvise(uint cookie);
+        void SetOptions(FileOpenOptions options);
+        void GetOptions(out FileOpenOptions options);
+        void SetDefaultFolder(IShellItem shellItem);
+        void SetFolder(IShellItem shellItem);
+        void GetFolder(out IShellItem shellItem);
+        void GetCurrentSelection(out IShellItem shellItem);
+        void SetFileName([MarshalAs(UnmanagedType.LPWStr)] string name);
+        void GetFileName([MarshalAs(UnmanagedType.LPWStr)] out string name);
+        void SetTitle([MarshalAs(UnmanagedType.LPWStr)] string title);
+        void SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string text);
+        void SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string label);
+        void GetResult(out IShellItem shellItem);
+        void AddPlace(IShellItem shellItem, uint alignment);
+        void SetDefaultExtension([MarshalAs(UnmanagedType.LPWStr)] string extension);
+        void Close(int result);
+        void SetClientGuid(ref Guid guid);
+        void ClearClientData();
+        void SetFilter(IntPtr filter);
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE")]
+    internal interface IShellItem
+    {
+        void BindToHandler(IntPtr bindContext, ref Guid handlerId, ref Guid interfaceId, out IntPtr result);
+        void GetParent(out IShellItem shellItem);
+        void GetDisplayName(ShellItemDisplayName displayName, out IntPtr name);
+        void GetAttributes(uint mask, out uint attributes);
+        void Compare(IShellItem shellItem, uint hint, out int order);
+    }
+
+    public static class ModernFolderPicker
+    {
+        private const int Cancelled = unchecked((int)0x800704C7);
+        private static readonly Guid ClientGuid = new Guid("7DA56A74-8C5F-44AA-991C-9CE2BA1CB35A");
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = true)]
+        private static extern int SHCreateItemFromParsingName(
+            [MarshalAs(UnmanagedType.LPWStr)] string path,
+            IntPtr bindContext,
+            ref Guid interfaceId,
+            [MarshalAs(UnmanagedType.Interface)] out IShellItem shellItem);
+
+        public static string PickFolder(IntPtr owner, string title, string initialDirectory)
+        {
+            IFileDialog dialog = (IFileDialog)new FileOpenDialogClass();
+            try
+            {
+                dialog.SetOptions(
+                    FileOpenOptions.PickFolders |
+                    FileOpenOptions.ForceFileSystem |
+                    FileOpenOptions.PathMustExist |
+                    FileOpenOptions.NoChangeDirectory);
+                dialog.SetTitle(title);
+                dialog.SetOkButtonLabel("Select folder");
+
+                Guid clientGuid = ClientGuid;
+                dialog.SetClientGuid(ref clientGuid);
+
+                if (!String.IsNullOrWhiteSpace(initialDirectory) && Directory.Exists(initialDirectory))
+                {
+                    IShellItem initialItem = null;
+                    Guid shellItemGuid = typeof(IShellItem).GUID;
+                    int initialResult = SHCreateItemFromParsingName(initialDirectory, IntPtr.Zero, ref shellItemGuid, out initialItem);
+                    if (initialResult >= 0 && initialItem != null)
+                    {
+                        try
+                        {
+                            dialog.SetFolder(initialItem);
+                        }
+                        finally
+                        {
+                            Marshal.ReleaseComObject(initialItem);
+                        }
+                    }
+                }
+
+                int result = dialog.Show(owner);
+                if (result == Cancelled) { return null; }
+                Marshal.ThrowExceptionForHR(result);
+
+                IShellItem selectedItem = null;
+                dialog.GetResult(out selectedItem);
+                try
+                {
+                    IntPtr pathPointer;
+                    selectedItem.GetDisplayName(ShellItemDisplayName.FileSystemPath, out pathPointer);
+                    try
+                    {
+                        return Marshal.PtrToStringUni(pathPointer);
+                    }
+                    finally
+                    {
+                        Marshal.FreeCoTaskMem(pathPointer);
+                    }
+                }
+                finally
+                {
+                    if (selectedItem != null) { Marshal.ReleaseComObject(selectedItem); }
+                }
+            }
+            finally
+            {
+                Marshal.FinalReleaseComObject(dialog);
+            }
+        }
+    }
+}
+'@
+}
+
+function Select-FolderPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$Title,
+        [string]$InitialDirectory = '',
+        [IntPtr]$OwnerHandle = [IntPtr]::Zero
+    )
+
+    try {
+        Initialize-ModernFolderPicker
+        return [ReelArrange.ModernFolderPicker]::PickFolder($OwnerHandle, $Title, $InitialDirectory)
+    }
+    catch {
+        # Keep a compatible fallback for systems where the modern Shell dialog cannot be created.
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = $Title
+        $dialog.ShowNewFolderButton = $false
+        if (-not [string]::IsNullOrWhiteSpace($InitialDirectory) -and (Test-Path -LiteralPath $InitialDirectory -PathType Container)) {
+            $dialog.SelectedPath = $InitialDirectory
+        }
+        if ($dialog.ShowDialog() -ne 'OK') { return $null }
+        return $dialog.SelectedPath
+    }
 }
 
 function Open-RepositoryPage {
@@ -190,6 +438,8 @@ function Get-Settings {
             EncryptedTmdbCredential = ''
             MovieRoot = ''
             ShowRoot = ''
+            LastMovieSource = ''
+            LastShowSource = ''
         }
     }
 
@@ -203,6 +453,12 @@ function Get-Settings {
         }
         if (-not ($settings.PSObject.Properties.Name -contains 'ShowRoot')) {
             $settings | Add-Member -NotePropertyName ShowRoot -NotePropertyValue ''
+        }
+        if (-not ($settings.PSObject.Properties.Name -contains 'LastMovieSource')) {
+            $settings | Add-Member -NotePropertyName LastMovieSource -NotePropertyValue ''
+        }
+        if (-not ($settings.PSObject.Properties.Name -contains 'LastShowSource')) {
+            $settings | Add-Member -NotePropertyName LastShowSource -NotePropertyValue ''
         }
         return $settings
     }
@@ -427,16 +683,18 @@ function Get-SearchSeed {
     $leafName = [IO.Path]::GetFileName($Name)
     $extension = [IO.Path]::GetExtension($leafName).ToLowerInvariant()
     $seed = if ($script:VideoExtensions -contains $extension) { [IO.Path]::GetFileNameWithoutExtension($leafName) } else { $leafName }
-    $yearMatch = [regex]::Match($seed, '(?<!\d)((?:19|20)\d{2})(?!\d)')
+    $yearMatch = [regex]::Match($seed, '(?<!\d)((?:19|20)\d{2})(?:(?:19|20)\d{2})?(?!\d)')
     $year = ''
-    if ($yearMatch.Success) { $year = $yearMatch.Value }
+    if ($yearMatch.Success) { $year = $yearMatch.Groups[1].Value }
     $seed = $seed -replace '\[[^\]]+\]|\{[^}]+\}', ' '
     if ($MediaType -eq 'tv') {
+        $seed = $seed -replace '(?i)TV[ ._-]*Series', ' '
         $seed = $seed -replace '(?i)\bS\d{1,2}[ ._-]*E\d{1,3}.*$', ' '
         $seed = $seed -replace '(?i)\b\d{1,2}x\d{1,3}.*$', ' '
+        $seed = $seed -replace '(?i)(?<![A-Z0-9])[1-9]\d{2}(?:[ ._-]+[1-9]\d{2})?(?![A-Z0-9]).*$', ' '
     }
     $seed = $seed -replace '(?i)\b(2160p|1080p|720p|480p|4k|uhd|hdr10\+?|dv|dolby[ ._-]*vision|bluray|blu-ray|bdrip|brrip|webrip|web-dl|webdl|hdtv|remux|x264|x265|h[ ._-]*264|h[ ._-]*265|hevc|av1|aac|dts|atmos|proper|repack)\b.*$', ' '
-    $seed = $seed -replace '(?<!\d)((?:19|20)\d{2})(?!\d).*$', ' '
+    $seed = $seed -replace '(?<!\d)((?:19|20)\d{2})(?:(?:19|20)\d{2})?(?!\d).*$', ' '
     $seed = $seed -replace '[._-]+', ' '
     $seed = $seed -replace '\s+', ' '
     return [pscustomobject]@{ Query = $seed.Trim(); Year = $year }
@@ -531,7 +789,10 @@ function Test-IsInExtraFolder {
 }
 
 function Select-MediaSource {
-    param([ValidateSet('movie', 'tv')][string]$MediaType)
+    param(
+        [ValidateSet('movie', 'tv')][string]$MediaType,
+        [string]$InitialDirectory = ''
+    )
 
     $form = New-Object System.Windows.Forms.Form
     Set-FormBranding $form
@@ -580,6 +841,9 @@ function Select-MediaSource {
         $dialog.Title = if ($MediaType -eq 'movie') { 'Select the movie video file' } else { 'Select TV episode files' }
         $dialog.Filter = 'Video files|*.mkv;*.mp4;*.avi;*.m4v;*.mov;*.wmv;*.ts;*.m2ts;*.webm;*.mpg;*.mpeg|All files|*.*'
         $dialog.Multiselect = ($MediaType -eq 'tv')
+        if (-not [string]::IsNullOrWhiteSpace($InitialDirectory) -and (Test-Path -LiteralPath $InitialDirectory -PathType Container)) {
+            $dialog.InitialDirectory = $InitialDirectory
+        }
         if ($dialog.ShowDialog() -ne 'OK') { return $null }
         $selectedFiles = @($dialog.FileNames | ForEach-Object { Get-Item -LiteralPath $_ })
         $includeFolderContent = $false
@@ -609,11 +873,9 @@ function Select-MediaSource {
         }
     }
 
-    $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
-    $folderDialog.Description = if ($MediaType -eq 'movie') { 'Select the downloaded movie folder' } else { 'Select the downloaded TV show or season folder' }
-    $folderDialog.ShowNewFolderButton = $false
-    if ($folderDialog.ShowDialog() -ne 'OK') { return $null }
-    $sourceRoot = $folderDialog.SelectedPath
+    $folderTitle = if ($MediaType -eq 'movie') { 'Select the downloaded movie folder' } else { 'Select the downloaded TV show or season folder' }
+    $sourceRoot = Select-FolderPath -Title $folderTitle -InitialDirectory $InitialDirectory
+    if ([string]::IsNullOrWhiteSpace($sourceRoot)) { return $null }
     if ($MediaType -eq 'movie') {
         $selectedFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File | Where-Object {
             ($script:VideoExtensions -contains $_.Extension.ToLowerInvariant()) -and -not (Test-IsLooseExtra $_)
@@ -979,7 +1241,32 @@ function Get-EpisodeInfo {
     if (-not $match.Success) {
         $match = [regex]::Match($base, '(?i)(?:^|[^A-Z0-9])(?<season>\d{1,2})x(?<episode>\d{1,3})(?:-(?<episode2>\d{1,3}))?')
     }
-    if (-not $match.Success) { return $null }
+    if (-not $match.Success) {
+        $compactMatches = [regex]::Matches($base, '(?i)(?<![A-Z0-9])(?<episodeCode>[1-9]\d{2})(?:[ ._-]+(?<episodeCode2>[1-9]\d{2}))?(?![A-Z0-9])')
+        foreach ($compactMatch in $compactMatches) {
+            $episodeCode = [int]$compactMatch.Groups['episodeCode'].Value
+            $season = [int][Math]::Floor($episodeCode / 100)
+            $episode = $episodeCode % 100
+            if ($episode -lt 1) { continue }
+
+            $lastEpisode = $episode
+            if ($compactMatch.Groups['episodeCode2'].Success) {
+                $secondCode = [int]$compactMatch.Groups['episodeCode2'].Value
+                $secondSeason = [int][Math]::Floor($secondCode / 100)
+                $secondEpisode = $secondCode % 100
+                if ($secondSeason -eq $season -and $secondEpisode -ge $episode) {
+                    $lastEpisode = $secondEpisode
+                }
+            }
+
+            return [pscustomobject]@{
+                Season = $season
+                Episode = $episode
+                LastEpisode = $lastEpisode
+            }
+        }
+        return $null
+    }
     $last = [int]$match.Groups['episode'].Value
     if ($match.Groups['episode2'].Success) { $last = [int]$match.Groups['episode2'].Value }
     return [pscustomobject]@{
@@ -1003,7 +1290,7 @@ function Show-EpisodeNumberDialog {
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object Drawing.Point(18, 15)
     $label.Size = New-Object Drawing.Size(420, 55)
-    $label.Text = "I could not find SxxEyy in:`r`n$FileName`r`nEnter the season and episode."
+    $label.Text = "I could not find S01E01, 1x01, or compact 101 numbering in:`r`n$FileName`r`nEnter the season and episode."
     $form.Controls.Add($label)
 
     $seasonLabel = New-Object System.Windows.Forms.Label
@@ -1056,6 +1343,203 @@ function Show-EpisodeNumberDialog {
     return $form.Tag
 }
 
+function Get-NormalizedEpisodeTitleKey {
+    param([string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return '' }
+    return ($Value.ToLowerInvariant() -replace '[^a-z0-9]', '')
+}
+
+function Find-TmdbSpecialMatch {
+    param(
+        [IO.FileInfo]$Video,
+        [object]$SpecialsData
+    )
+
+    if ($null -eq $SpecialsData) { return $null }
+    $videoKey = Get-NormalizedEpisodeTitleKey $Video.BaseName
+    if ([string]::IsNullOrWhiteSpace($videoKey)) { return $null }
+
+    $candidates = New-Object System.Collections.Generic.List[object]
+    foreach ($special in @($SpecialsData.episodes)) {
+        $titleKey = Get-NormalizedEpisodeTitleKey ([string]$special.name)
+        if ($titleKey.Length -lt 5) { continue }
+        if ($videoKey.Contains($titleKey)) {
+            $candidates.Add([pscustomobject]@{
+                Record = $special
+                KeyLength = $titleKey.Length
+            })
+        }
+    }
+    if ($candidates.Count -eq 0) { return $null }
+
+    $longest = [int](($candidates | Measure-Object -Property KeyLength -Maximum).Maximum)
+    $best = @($candidates | Where-Object { $_.KeyLength -eq $longest })
+    if ($best.Count -ne 1) { return $null }
+    return $best[0].Record
+}
+
+function Test-TmdbEpisodeRangeExists {
+    param(
+        [object]$SeasonData,
+        [object]$EpisodeInfo
+    )
+
+    if ($null -eq $SeasonData -or $null -eq $EpisodeInfo) { return $false }
+    for ($number = [int]$EpisodeInfo.Episode; $number -le [int]$EpisodeInfo.LastEpisode; $number++) {
+        $record = @($SeasonData.episodes | Where-Object { [int]$_.episode_number -eq $number } | Select-Object -First 1)
+        if ($record.Count -eq 0) { return $false }
+    }
+    return $true
+}
+
+function Resolve-TvEpisodeAssignments {
+    param(
+        [IO.FileInfo[]]$Videos,
+        [object]$Match,
+        [string]$Credential,
+        [object]$SpecialsData = $null,
+        [hashtable]$SeasonDataByNumber = $null,
+        [switch]$SkipDialog
+    )
+
+    if ($null -eq $SeasonDataByNumber) { $SeasonDataByNumber = @{} }
+    $seasonLookupSucceeded = @{}
+
+    if ($null -eq $SpecialsData) {
+        try {
+            $SpecialsData = Invoke-TmdbRequest -Path ("/tv/{0}/season/0" -f $Match.Item.id) -Query @{ language = 'en-US' } -Credential $Credential
+        }
+        catch {
+            $SpecialsData = $null
+        }
+    }
+
+    $items = New-Object System.Collections.Generic.List[object]
+    $suggestions = New-Object System.Collections.Generic.List[object]
+    foreach ($video in $Videos) {
+        $parsedEpisode = Get-EpisodeInfo $video.Name
+        $trySpecialMatch = ($null -eq $parsedEpisode)
+
+        if ($null -ne $parsedEpisode -and [int]$parsedEpisode.Season -gt 0) {
+            $seasonKey = [string]$parsedEpisode.Season
+            if (-not $SeasonDataByNumber.ContainsKey($seasonKey)) {
+                try {
+                    $SeasonDataByNumber[$seasonKey] = Invoke-TmdbRequest -Path ("/tv/{0}/season/{1}" -f $Match.Item.id, $parsedEpisode.Season) -Query @{ language = 'en-US' } -Credential $Credential
+                    $seasonLookupSucceeded[$seasonKey] = $true
+                }
+                catch {
+                    $SeasonDataByNumber[$seasonKey] = $null
+                    $seasonLookupSucceeded[$seasonKey] = $false
+                }
+            }
+            elseif (-not $seasonLookupSucceeded.ContainsKey($seasonKey)) {
+                $seasonLookupSucceeded[$seasonKey] = ($null -ne $SeasonDataByNumber[$seasonKey])
+            }
+
+            if ([bool]$seasonLookupSucceeded[$seasonKey] -and
+                -not (Test-TmdbEpisodeRangeExists -SeasonData $SeasonDataByNumber[$seasonKey] -EpisodeInfo $parsedEpisode)) {
+                $trySpecialMatch = $true
+            }
+        }
+
+        $suggestedEpisode = $null
+        $specialRecord = $null
+        if ($trySpecialMatch -and $null -ne $SpecialsData) {
+            $specialRecord = Find-TmdbSpecialMatch -Video $video -SpecialsData $SpecialsData
+            if ($null -ne $specialRecord) {
+                $suggestedEpisode = [pscustomobject]@{
+                    Season = 0
+                    Episode = [int]$specialRecord.episode_number
+                    LastEpisode = [int]$specialRecord.episode_number
+                }
+                $originalLabel = if ($null -eq $parsedEpisode) {
+                    'Unnumbered'
+                }
+                else {
+                    'S{0:D2}E{1:D2}' -f [int]$parsedEpisode.Season, [int]$parsedEpisode.Episode
+                }
+                $suggestions.Add([pscustomobject]@{
+                    Video = $video
+                    Episode = $suggestedEpisode
+                    Title = [string]$specialRecord.name
+                    OriginalLabel = $originalLabel
+                })
+            }
+        }
+
+        $items.Add([pscustomobject]@{
+            Video = $video
+            ParsedEpisode = $parsedEpisode
+            SuggestedEpisode = $suggestedEpisode
+        })
+    }
+
+    $useSuggestions = $false
+    if ($suggestions.Count -gt 0) {
+        if ($SkipDialog) {
+            $useSuggestions = $true
+        }
+        else {
+            $suggestionLines = @($suggestions | ForEach-Object {
+                "{0}`r`n  {1} -> S00E{2:D2} {3}" -f $_.Video.Name, $_.OriginalLabel, [int]$_.Episode.Episode, $_.Title
+            }) -join "`r`n`r`n"
+            $answer = [System.Windows.Forms.MessageBox]::Show(
+                "TMDB found recommended Season 00 matches:`r`n`r`n$suggestionLines`r`n`r`nUse these special-episode assignments? They will be shown again in the destination preview before any files are transferred.",
+                'TMDB specials found',
+                'YesNo',
+                'Question'
+            )
+            $useSuggestions = ($answer -eq 'Yes')
+        }
+    }
+
+    $validVideos = New-Object System.Collections.Generic.List[IO.FileInfo]
+    $validEpisodes = New-Object System.Collections.Generic.List[object]
+    $unrecognizedVideos = New-Object System.Collections.Generic.List[IO.FileInfo]
+    $appliedSpecialCount = 0
+    foreach ($item in $items) {
+        $episode = $item.ParsedEpisode
+        if ($useSuggestions -and $null -ne $item.SuggestedEpisode) {
+            $episode = $item.SuggestedEpisode
+            $appliedSpecialCount++
+        }
+        if ($null -eq $episode -and $Videos.Count -eq 1) {
+            $episode = Show-EpisodeNumberDialog $item.Video.Name
+            if ($null -eq $episode) { return $null }
+        }
+        if ($null -eq $episode) {
+            $unrecognizedVideos.Add($item.Video)
+            continue
+        }
+        $validVideos.Add($item.Video)
+        $validEpisodes.Add($episode)
+    }
+
+    if ($validVideos.Count -eq 0) {
+        throw 'No episode numbers were found. Episode files need S01E01, 1x01, compact 101 numbering, or a recognizable TMDB special title.'
+    }
+    if ($unrecognizedVideos.Count -gt 0 -and -not $SkipDialog) {
+        $unrecognizedSample = @($unrecognizedVideos | Select-Object -First 8 | ForEach-Object { $_.Name }) -join "`r`n"
+        if ($unrecognizedVideos.Count -gt 8) {
+            $unrecognizedSample += "`r`n...and $($unrecognizedVideos.Count - 8) more file(s)"
+        }
+        $answer = [System.Windows.Forms.MessageBox]::Show(
+            "$($unrecognizedVideos.Count) video file(s) could not be assigned an episode and will be skipped:`r`n`r`n$unrecognizedSample`r`n`r`nContinue with $($validVideos.Count) recognized episode file(s)?",
+            'Unrecognized episodes',
+            'YesNo',
+            'Warning'
+        )
+        if ($answer -ne 'Yes') { return $null }
+    }
+
+    return [pscustomobject]@{
+        Videos = $validVideos.ToArray()
+        EpisodeInfo = $validEpisodes.ToArray()
+        AppliedSpecialCount = $appliedSpecialCount
+        UnrecognizedCount = $unrecognizedVideos.Count
+    }
+}
+
 function Select-Operation {
     param(
         [string]$SuggestedRoot,
@@ -1088,12 +1572,8 @@ function Select-Operation {
     $browse.Size = New-Object Drawing.Size(95, 29)
     $browse.Text = 'Browse...'
     $browse.Add_Click({
-        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-        $dialog.Description = $rootLabel.Text
-        if (-not [string]::IsNullOrWhiteSpace($rootBox.Text) -and (Test-Path -LiteralPath $rootBox.Text -PathType Container)) {
-            $dialog.SelectedPath = $rootBox.Text
-        }
-        if ($dialog.ShowDialog() -eq 'OK') { $rootBox.Text = $dialog.SelectedPath }
+        $selectedRoot = Select-FolderPath -Title $rootLabel.Text -InitialDirectory $rootBox.Text -OwnerHandle $form.Handle
+        if (-not [string]::IsNullOrWhiteSpace($selectedRoot)) { $rootBox.Text = $selectedRoot }
     })
     $form.Controls.Add($browse)
 
@@ -1756,6 +2236,15 @@ function Get-PlanPreview {
 
 function Invoke-SelfTest {
     $failures = New-Object System.Collections.Generic.List[string]
+    try {
+        Initialize-ModernFolderPicker
+        if ($null -eq ('ReelArrange.ModernFolderPicker' -as [type])) {
+            $failures.Add('Modern folder picker initialization')
+        }
+    }
+    catch {
+        $failures.Add("Modern folder picker initialization: $($_.Exception.Message)")
+    }
     $seed = Get-SearchSeed 'The.Matrix.1999.1080p.BluRay.x265.mkv' 'movie'
     if ($seed.Query -ne 'The Matrix' -or $seed.Year -ne '1999') { $failures.Add('Movie search cleanup') }
     $seed = Get-SearchSeed 'Some.Show.S02E03.2160p.WEB-DL.mkv' 'tv'
@@ -1764,6 +2253,35 @@ function Invoke-SelfTest {
     if ($null -eq $ep -or $ep.Season -ne 2 -or $ep.Episode -ne 3 -or $ep.LastEpisode -ne 4) { $failures.Add('SxxEyy episode parsing') }
     $ep = Get-EpisodeInfo 'Some Show 1x07.mkv'
     if ($null -eq $ep -or $ep.Season -ne 1 -or $ep.Episode -ne 7) { $failures.Add('1xYY episode parsing') }
+    $ep = Get-EpisodeInfo 'Wishbone 101 102 A Tail in Twain.mkv'
+    if ($null -eq $ep -or $ep.Season -ne 1 -or $ep.Episode -ne 1 -or $ep.LastEpisode -ne 2) { $failures.Add('Compact SEE multi-episode parsing') }
+    $ep = Get-EpisodeInfo 'Wishbone 203 The Prince of Wags.mkv'
+    if ($null -eq $ep -or $ep.Season -ne 2 -or $ep.Episode -ne 3 -or $ep.LastEpisode -ne 3) { $failures.Add('Compact SEE episode parsing') }
+    if ($null -ne (Get-EpisodeInfo 'Some Show 720p WEB-DL.mkv')) { $failures.Add('Compact SEE resolution safeguard') }
+    $wishboneFolderSeed = Get-SearchSeed 'WishboneTVSeries19951997' 'tv'
+    $wishboneFileSeed = Get-SearchSeed 'Wishbone 101 102 A Tail in Twain.mkv' 'tv'
+    if ($wishboneFolderSeed.Query -ne 'Wishbone' -or $wishboneFolderSeed.Year -ne '1995' -or $wishboneFileSeed.Query -ne 'Wishbone') {
+        $failures.Add('Compact TV archive search cleanup')
+    }
+    $mockSpecials = [pscustomobject]@{ episodes = @(
+        [pscustomobject]@{ episode_number = 1; name = 'Feed the Dog' },
+        [pscustomobject]@{ episode_number = 2; name = "Wishbone's Dog Days of the West" },
+        [pscustomobject]@{ episode_number = 3; name = 'The Making of Wishbone' }
+    ) }
+    $mockSeasonTwo = [pscustomobject]@{ episodes = @(1..10 | ForEach-Object {
+        [pscustomobject]@{ episode_number = $_; name = "Episode $_" }
+    }) }
+    $mockWishboneMatch = [pscustomobject]@{ Item = [pscustomobject]@{ id = 2152 } }
+    $specialResolution = Resolve-TvEpisodeAssignments -Videos @(
+        (New-Object IO.FileInfo 'C:\test\Wishbone Bonus Feed the Dog.mkv'),
+        (New-Object IO.FileInfo "C:\test\Wishbone 211 Wishbone's Dog Days of the West.mkv")
+    ) -Match $mockWishboneMatch -Credential '' -SpecialsData $mockSpecials -SeasonDataByNumber @{ '2' = $mockSeasonTwo } -SkipDialog
+    if ($null -eq $specialResolution -or $specialResolution.AppliedSpecialCount -ne 2 -or
+        $specialResolution.EpisodeInfo.Count -ne 2 -or
+        $specialResolution.EpisodeInfo[0].Season -ne 0 -or $specialResolution.EpisodeInfo[0].Episode -ne 1 -or
+        $specialResolution.EpisodeInfo[1].Season -ne 0 -or $specialResolution.EpisodeInfo[1].Episode -ne 2) {
+        $failures.Add('TMDB special title reconciliation')
+    }
     if ((Get-SafeName 'Movie: The / Test?') -ne 'Movie- The - Test-') { $failures.Add('Windows-safe names') }
     $longTargetDirectory = 'C:\Media\Very Long Test Show (2026) [tmdbid-999]\Season 01'
     $longTargetBase = 'Very Long Test Show (2026) S01E01-E12 ' + ('An Extremely Descriptive Episode Title + ' * 12)
@@ -1955,11 +2473,13 @@ if ($SelfTest) {
 
 try {
     $settings = Get-Settings
+    :workflow while ($true) {
     $mediaType = Show-MediaTypeDialog
-    if ([string]::IsNullOrWhiteSpace($mediaType)) { exit 0 }
+    if ([string]::IsNullOrWhiteSpace($mediaType)) { break workflow }
 
-    $source = Select-MediaSource $mediaType
-    if ($null -eq $source) { exit 0 }
+    $initialSourceDirectory = if ($mediaType -eq 'movie') { [string]$settings.LastMovieSource } else { [string]$settings.LastShowSource }
+    $source = Select-MediaSource -MediaType $mediaType -InitialDirectory $initialSourceDirectory
+    if ($null -eq $source) { break workflow }
     $videos = @($source.Videos)
     if ($videos.Count -eq 0) {
         if ($mediaType -eq 'movie') {
@@ -1973,8 +2493,16 @@ try {
         }
     }
 
+    if ($mediaType -eq 'movie') {
+        $settings.LastMovieSource = [string]$source.SourceRoot
+    }
+    else {
+        $settings.LastShowSource = [string]$source.SourceRoot
+    }
+    Save-Settings $settings
+
     $formatResolution = Resolve-DuplicateVideoFormats -Videos $videos
-    if ($null -eq $formatResolution) { exit 0 }
+    if ($null -eq $formatResolution) { break workflow }
     $videos = @($formatResolution.Videos)
     if ($formatResolution.ExcludedCount -gt 0) {
         Write-ActivityLog ("Duplicate video formats: kept {0}; excluded {1} alternate video file(s) across {2} duplicate name(s)." -f
@@ -1982,7 +2510,7 @@ try {
     }
 
     $credential = Get-TmdbCredential $settings
-    if ([string]::IsNullOrWhiteSpace($credential)) { exit 0 }
+    if ([string]::IsNullOrWhiteSpace($credential)) { break workflow }
 
     $seedName = [string]$source.SearchName
     $seed = Get-SearchSeed $seedName $mediaType
@@ -1990,35 +2518,17 @@ try {
         $seed = Get-SearchSeed $videos[0].Name $mediaType
     }
     $match = Select-TmdbMatch -MediaType $mediaType -InitialQuery $seed.Query -InitialYear $seed.Year -Credential $credential
-    if ($null -eq $match) { exit 0 }
+    if ($null -eq $match) { break workflow }
 
     $episodeInfo = @()
     if ($mediaType -eq 'tv') {
-        $validVideos = New-Object System.Collections.Generic.List[IO.FileInfo]
-        $validEpisodes = New-Object System.Collections.Generic.List[object]
-        foreach ($video in $videos) {
-            $ep = Get-EpisodeInfo $video.Name
-            if ($null -eq $ep) {
-                if ($videos.Count -eq 1) {
-                    $ep = Show-EpisodeNumberDialog $video.Name
-                    if ($null -eq $ep) { exit 0 }
-                }
-                else {
-                    continue
-                }
-            }
-            $validVideos.Add($video)
-            $validEpisodes.Add($ep)
+        $episodeResolution = Resolve-TvEpisodeAssignments -Videos $videos -Match $match -Credential $credential
+        if ($null -eq $episodeResolution) { break workflow }
+        $videos = @($episodeResolution.Videos)
+        $episodeInfo = @($episodeResolution.EpisodeInfo)
+        if ($episodeResolution.AppliedSpecialCount -gt 0) {
+            Write-ActivityLog ("TMDB specials: applied {0} confirmed Season 00 assignment(s)." -f $episodeResolution.AppliedSpecialCount)
         }
-        if ($validVideos.Count -eq 0) {
-            throw 'No episode numbers were found. Episode files need S01E01 or 1x01 in their names.'
-        }
-        if ($validVideos.Count -lt $videos.Count) {
-            $answer = [System.Windows.Forms.MessageBox]::Show("$($videos.Count - $validVideos.Count) video file(s) did not contain an episode number and will be skipped. Continue with $($validVideos.Count) recognized episode(s)?", 'Unrecognized episodes', 'YesNo', 'Warning')
-            if ($answer -ne 'Yes') { exit 0 }
-        }
-        $videos = $validVideos.ToArray()
-        $episodeInfo = $validEpisodes.ToArray()
     }
 
     $suggestedRoot = if ($mediaType -eq 'movie') { [string]$settings.MovieRoot } else { [string]$settings.ShowRoot }
@@ -2031,7 +2541,7 @@ try {
     }
     $preview = Get-PlanPreview -Plan $temporaryPlan -Root $temporaryRoot
     $operation = Select-Operation -SuggestedRoot $suggestedRoot -Preview $preview -MediaType $mediaType
-    if ($null -eq $operation) { exit 0 }
+    if ($null -eq $operation) { break workflow }
 
     if ($mediaType -eq 'movie') {
         $settings.MovieRoot = $operation.Root
@@ -2044,14 +2554,16 @@ try {
     Save-Settings $settings
 
     $transferResult = Invoke-TransferPlan -Plan $plan -Mode $operation.Mode -CollisionPolicy $operation.CollisionPolicy
-    if ($transferResult.Cancelled) { exit 0 }
+    if ($transferResult.Cancelled) { break workflow }
     $videoCount = @($plan | Where-Object { $script:VideoExtensions -contains ([IO.Path]::GetExtension($_.Target).ToLowerInvariant()) }).Count
     $destination = Split-Path -Parent $plan[0].Target
     if ($mediaType -eq 'tv') { $destination = Split-Path -Parent $destination }
     $transferSummary = "$($operation.Mode) completed for $($transferResult.Completed) file(s), including matching sidecars."
     if ($transferResult.Overwritten -gt 0) { $transferSummary += "`r`nOverwritten: $($transferResult.Overwritten) existing file(s)." }
     if ($transferResult.Skipped -gt 0) { $transferSummary += "`r`nSkipped: $($transferResult.Skipped) existing file(s)." }
-    Show-InfoMessage ("Done. Prepared $videoCount video file(s) for Jellyfin using TMDB ID $($match.Item.id).`r`n`r`n$transferSummary`r`n`r`nDestination:`r`n$destination")
+    $completionMessage = "Prepared $videoCount video file(s) for Jellyfin using TMDB ID $($match.Item.id).`r`n`r`n$transferSummary`r`n`r`nDestination:`r`n$destination"
+    if (-not (Show-CompletionDialog $completionMessage)) { break workflow }
+    }
 }
 catch {
     try { Write-ActivityLog ("ERROR: $($_.Exception.Message)") } catch { }

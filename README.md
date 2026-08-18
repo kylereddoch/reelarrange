@@ -80,7 +80,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 The installer:
 
 1. Parses and tests the PowerShell application.
-2. Builds an icon-bearing windowless executable from the included C# source.
+2. Builds an icon-bearing Windows executable from the included C# source. The executable hosts the PowerShell workflow in-process, so ReelArrange owns its taskbar window and icon without showing a console.
 3. Installs the executable, PowerShell application, logo, and notices under `%LOCALAPPDATA%\Programs\ReelArrange`.
 4. Creates a **ReelArrange** shortcut on the current user's Desktop.
 5. Creates **ReelArrange** and **About ReelArrange** shortcuts in the current user's Start menu.
@@ -102,6 +102,14 @@ To upgrade after pulling a newer version, run `scripts\install.ps1` again.
 8. Start the transfer and follow the live status window.
 
 Selecting a complete release folder is recommended when the download contains extras or artwork. If a movie file is selected directly, ReelArrange detects recognized sibling extras folders and asks whether to include them.
+
+Folder selection uses the modern Windows Explorer picker, including its address bar, sidebar, and normal drive navigation. ReelArrange remembers the last movie and TV source folders separately and starts there the next time that source type is selected.
+
+After a successful transfer, choose **Process another** to return to the Movie/TV selection screen without closing ReelArrange, or choose **Close** when you are finished.
+
+TV filenames may use `S01E01`, `1x01`, or compact three-digit archive numbering such as `101` for Season 1 Episode 1 and `203` for Season 2 Episode 3. Combined files such as `101 102` are treated as `S01E01-E02`.
+
+If an unnumbered TV filename closely matches a TMDB Season 00 title, or its parsed regular-season episode does not exist in TMDB, ReelArrange recommends the matching special. You must confirm the proposed Season 00 assignment, and it appears again in the destination preview before any transfer begins.
 
 If a folder contains same-named videos in multiple formats, such as matching MKV and MP4 copies of every episode, ReelArrange pauses before TMDB lookup and asks which format to keep. It recommends the format with the best episode coverage and larger source files, while making clear that file size is only a practical signal and not a full quality inspection. Unselected video copies remain untouched in the source folder.
 
@@ -172,7 +180,7 @@ See [Development](docs/DEVELOPMENT.md), [Architecture](docs/ARCHITECTURE.md), an
 
 ## Project status
 
-The current version is `0.2.0`. See [CHANGELOG.md](CHANGELOG.md) for changes and planned compatibility notes.
+The current version is `0.3.0`. See [CHANGELOG.md](CHANGELOG.md) for changes and planned compatibility notes.
 
 ## License and service notices
 

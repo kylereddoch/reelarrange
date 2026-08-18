@@ -15,7 +15,7 @@ ReelArrange.ps1 (PowerShell 5.1 + WinForms)
     └── Native Windows file transfer with progress callbacks
 ```
 
-The launcher is a minimal Windows GUI-subsystem executable with ReelArrange product metadata and an embedded multi-resolution icon. It starts Windows PowerShell without allocating a console, waits for the script to exit, and returns the same exit code. The `--about` launcher option opens the About window directly.
+The launcher is a Windows GUI-subsystem executable with ReelArrange product metadata, an embedded multi-resolution icon, and an explicit ReelArrange taskbar identity. It hosts the Windows PowerShell 5.1 runspace inside `ReelArrange.exe` on the main STA thread, so WinForms windows belong to the ReelArrange process instead of `powershell.exe` and no console is allocated. The `--about` launcher option opens the About window directly.
 
 The installed `assets` folder provides the PNG used inside the About window and the ICO used by WinForms. The installer creates a Desktop shortcut plus launch and About entries under the current user's Start menu.
 
